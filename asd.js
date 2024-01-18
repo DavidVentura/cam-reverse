@@ -1,3 +1,5 @@
+import { replaceFunctions } from "./func_replacements.js";
+
 function hook_fn(name_in_elf, enter, leave) {
   var symbol_addr = DebugSymbol.fromName(name_in_elf).address;
   console.log(`${name_in_elf} addr is: ${symbol_addr}`);
@@ -127,32 +129,54 @@ const hook_pack_P2pId = () => {
   );
 };
 
+const hook_create_P2pRdy = () => {
+  var sym = "create_P2pRdy";
+  hook_fn(
+    sym,
+    (args) => {
+      console.log(`onEnter ${sym}`);
+      // (ushort *param_1,int param_2,undefined4 *param_3,undefined8 param_4
+      this.out = args[0]; // u16 ptr
+      let _in = args[1].readByteArray(2);
+      console.log("in", _in);
+    },
+    (retval) => {
+      console.log(`onExit ${sym}, retval ${retval}`);
+      console.log(this.out.readByteArray(0x18)); //  _g_p2prdy_size = 0x14, retruns +4
+    },
+  );
+};
 let indent = 0;
 function doHooks() {
   var libnative_addr = Module.findBaseAddress("libvdp.so");
   // const prefixes = ["Send_Pkt*", "P2P*", "*RcvTh*", "parse_*"]; // "XQP2P*",
-  const prefixes = ["parse_*", "pack_*", "Send_Pkt*"]; // "XQP2P*",
+  // const prefixes = ["parse_*", "pack_*", "Send_Pkt*", "create_*"];
+  const prefixes = ["create_*"];
   const spam = ["XQP2P_Check_Buffer", "P2P_ChannelBufferCheck"];
-  prefixes
-    .map((prefix) => DebugSymbol.findFunctionsMatching(prefix))
-    .flat()
-    .map(DebugSymbol.fromAddress)
-    .filter((dbg) => !spam.includes(dbg.name))
-    .map((dbg) => {
-      Interceptor.attach(dbg.address, {
-        onEnter: (args) => {
-          indent = indent + 1;
-          console.log(" ".repeat(indent) + dbg.name);
-        },
-        onLeave: (retval) => {
-          indent = indent - 1;
-        },
-      });
-      console.log(`Hooked ${dbg.name}`);
-    });
-
   if (libnative_addr) {
     hook___android_log_print();
+    hook_create_P2pRdy;
+    const replaced = replaceFunctions();
+    console.log(replaced);
+    prefixes
+      .map((prefix) => DebugSymbol.findFunctionsMatching(prefix))
+      .flat()
+      .map(DebugSymbol.fromAddress)
+      .filter((dbg) => !spam.includes(dbg.name))
+      .map((dbg) => {
+        Interceptor.attach(dbg.address, {
+          onEnter: (args) => {
+            indent = indent + 1;
+            let flag = replaced.includes(dbg.name) ? "[REPLACED] " : "";
+            console.log(" ".repeat(indent) + flag + dbg.name);
+          },
+          onLeave: (retval) => {
+            indent = indent - 1;
+          },
+        });
+        console.log(`Hooked ${dbg.name}`);
+      });
+
     // hook_p2p_read();
     // hook_pack_P2pId();
     // hook_pack_ClntPkt();
