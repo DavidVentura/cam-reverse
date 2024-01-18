@@ -54,15 +54,15 @@ const hook___android_log_print = () => {
         s: (x) => x.readCString(),
         d: (x) => x.toInt32(),
         u: (x) => x.toInt32(),
-        z: (x) => x.toInt64(),
-        l: (x) => x.toInt64(),
+        z: (x) => x.toInt32(), // FIXME
+        l: (x) => x.toInt32(), // FIXME
         x: (x) => x.toInt32().toString(16),
         f: (x) => x.toFloat(),
       };
 
       const values = types.map((t, idx) => o[t](args[idx + 3]));
       const newStr = sprintf(fmt, values);
-      console.log(newStr);
+      //console.log(newStr); // FIXME
     },
     () => {},
   );
@@ -92,7 +92,7 @@ let indent = 0;
 function doReplaceFunctions() {
   // const prefixes = ["Send_Pkt*", "P2P*", "*RcvTh*", "parse_*"]; // "XQP2P*",
   // const prefixes = ["parse_*", "pack_*", "Send_Pkt*", "create_*"];
-  const prefixes = ["create_*"];
+  const prefixes = ["create_*", "pack_*"];
   const spam = ["XQP2P_Check_Buffer", "P2P_ChannelBufferCheck"];
 
   const replaced = replaceFunctions();
@@ -122,7 +122,7 @@ function doHooks() {
     hook___android_log_print();
     // hook_create_P2pRdy();
     // hook_in_out_buf("create_LstReq", 0x1c, 0x1c);
-    hook_in_out_buf("create_P2pRdy", 0x1c, 0x1c);
+    //hook_in_out_buf("create_P2pRdy", 0x1c, 0x1c);
     doReplaceFunctions();
 
     // hook_p2p_read();
