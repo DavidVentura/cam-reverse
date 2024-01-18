@@ -14,7 +14,7 @@ System.loadLibrary.implementation = function(libraryName) {
 target_package_name = "com.ysxlite.cam"
 shared_library_name = "vdp.so"
 native_function_name = "p2p_read"
-js_code = open('asd.js').read()
+js_code = open('bundle.js').read()
 def on_message(m, _data):
     print('got', m, _data)
 
