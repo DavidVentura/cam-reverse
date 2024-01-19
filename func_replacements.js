@@ -162,6 +162,36 @@ const create_LstReq = (outbuf, inbuf) => {
   return LISTREQ_SIZE + 4; // this is actually wrong (and unused) in the code -- it is 0x1c
 };
 
+const dbg_create_DrwAck = (og_func) => {
+  const create_DrwAck = (outbuf, idk_param2, idk_param3, half_len, inbuf) => {
+    console.log(`2: ${idk_param2} 3: ${idk_param3}, halflen: ${half_len}`);
+    console.log("inbuf");
+    const copyLen = half_len * 2;
+    //console.log(inbuf.readByteArray(copyLen));
+
+    //console.log("outbuf BEFORE");
+    //console.log(outbuf.readByteArray(copyLen + 12));
+
+    //const retval = og_func(outbuf, idk_param2, idk_param3, half_len, inbuf);
+    //console.log("outbuf");
+    //console.log(outbuf.readByteArray(copyLen + 12));
+
+    //const new_outbuf = Memory.alloc(copyLen + 12);
+    outbuf.writeU16(0xd1f1);
+    outbuf.add(2).writeU16(u16_swap(copyLen + 4));
+    outbuf.add(8).writeU8(idk_param2);
+    outbuf.add(9).writeU8(idk_param3);
+    outbuf.add(10).writeU16(u16_swap(half_len));
+    outbuf.add(12).writeByteArray(inbuf.readByteArray(copyLen));
+
+    //console.log("my outbuf");
+    //console.log(new_outbuf.readByteArray(copyLen + 12));
+    return half_len * 2 + 8; // this is wrong in the code as well - should be +12
+  };
+  return create_DrwAck;
+};
+
+const u16_swap = (x) => ((x & 0xff00) >> 8) | ((x & 0x00ff) << 8);
 const dbg_create_Drw = (og_func) => {
   const create_Drw = (
     outbuf,
@@ -192,8 +222,7 @@ const dbg_create_Drw = (og_func) => {
 	00000030  01 01 01 01
 	*/
 
-    const copy_len_swapped =
-      (((copy_len + 4) & 0xff00) >> 8) | (((copy_len + 4) & 0x00ff) << 8);
+    const copy_len_swapped = u16_swap(copy_len + 4);
     outbuf.writeU16(0xd0f1);
     outbuf.add(2).writeU16(copy_len_swapped);
     outbuf.add(8).writeU8(0xd1);
@@ -323,9 +352,6 @@ export const replace_func = (stub, ret, args) => {
 /*
  hard
  [NOT REPLACED] pack_ClntPkt
-
- todo:
- [NOT REPLACED] create_DrwAck
  */
 export const replaceFunctions = () => {
   const replacements = [
@@ -335,18 +361,15 @@ export const replaceFunctions = () => {
     [create_LanSearchExt, "uint8", ["pointer"]],
     [create_Hello, "uint8", ["pointer"]],
     [create_Close, "uint8", ["pointer"]],
-    /*
-    [
-      dbg_create_P2pReq,
-      "uint8",
-      ["pointer", "pointer", "pointer", "uint"],
-      true,
-    ],
-        */
     [
       dbg_create_Drw,
       "uint",
       ["pointer", "uint64", "uint8", "uint16", "uint32", "pointer"],
+    ],
+    [
+      dbg_create_DrwAck,
+      "uint",
+      ["pointer", "uint8", "uint8", "uint16", "pointer"],
     ],
     [create_P2pReq, "uint8", ["pointer", "pointer", "pointer", "uint"]],
     [create_LstReq, "uint8", ["pointer", "pointer"]],
