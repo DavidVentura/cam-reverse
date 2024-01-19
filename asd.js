@@ -93,7 +93,11 @@ function doReplaceFunctions() {
   // const prefixes = ["Send_Pkt*", "P2P*", "*RcvTh*", "parse_*"]; // "XQP2P*",
   // const prefixes = ["parse_*", "pack_*", "Send_Pkt*", "create_*"];
   const prefixes = ["create_*", "pack_*"];
-  const spam = ["XQP2P_Check_Buffer", "P2P_ChannelBufferCheck"];
+  const spam = [
+    "XQP2P_Check_Buffer",
+    "P2P_ChannelBufferCheck",
+    "create_android_logger",
+  ];
 
   const replaced = replaceFunctions();
 
