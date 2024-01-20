@@ -1,4 +1,4 @@
-import { replaceFunctions } from "./func_replacements.js";
+import { replaceFunctions, Commands, CommandsByValue, u16_swap } from "./func_replacements.js";
 
 const hook_fn = (name_in_elf, enter, leave) => {
   var symbol_addr = DebugSymbol.fromName(name_in_elf).address;
@@ -45,7 +45,7 @@ const hook___android_log_print = () => {
     sym,
     (args) => {
       // let _prio = args[0].toInt32();
-      // let _tag = args[1].readCString();
+      let _tag = args[1].readCString();
       let fmt = args[2].readCString();
       // console.log(fmt); // debug if crashes due to missing placeholder
       const types = placeholderTypes(fmt); // ['s', 'd', ..]`
@@ -62,9 +62,53 @@ const hook___android_log_print = () => {
 
       const values = types.map((t, idx) => o[t](args[idx + 3]));
       const newStr = sprintf(fmt, values);
-      //console.log(newStr); // FIXME
+      console.log(_tag, newStr);
     },
     () => {},
+  );
+};
+
+const hook_udpsend = () => {
+  hook_fn(
+    "XQ_UdpPktSend",
+    (args) => {
+      const data = args[0].readByteArray(args[1].toInt32());
+      const cmd = u16_swap(args[0].readU16());
+      const name = CommandsByValue[cmd];
+      console.log(`UDP PKT SEND ${name} (0x${cmd.toString(16)})`);
+      console.log(data);
+    },
+    (retval) => {},
+  );
+
+  let o = {};
+  hook_fn(
+    "XqSckRecvfrom", //"XQ_UdpPktRecv",
+    (args) => {
+      o.buf = args[1];
+      o.len = args[2].toInt32();
+    },
+    (retval) => {
+      const data = o.buf.readByteArray(retval.toInt32());
+      const cmd = u16_swap(o.buf.readU16());
+      const name = CommandsByValue[cmd];
+      console.log(`UDP PKT RECV, cmd=${name}, 0x${cmd.toString(16)}, ret=${retval}`);
+      console.log(data);
+      if (cmd == Commands.Drw) {
+      }
+    },
+  );
+  let s = {};
+  hook_fn(
+    "PktSeq_seqGet",
+    (args) => {
+      s.buf = args[1];
+    },
+    (retval) => {
+      const data = s.buf.readByteArray(retval.toInt32());
+      console.log(`PktSeq GET ret=${retval}`);
+      console.log(data);
+    },
   );
 };
 
@@ -92,12 +136,18 @@ let indent = 0;
 function doReplaceFunctions() {
   // const prefixes = ["Send_Pkt*", "P2P*", "*RcvTh*", "parse_*"]; // "XQP2P*",
   // const prefixes = ["parse_*", "pack_*", "Send_Pkt*", "create_*"];
-  const prefixes = ["create_*", "pack_*"];
-  const spam = [
-    "XQP2P_Check_Buffer",
-    "P2P_ChannelBufferCheck",
-    "create_android_logger",
+  const prefixes = [
+    "create_*",
+    "pack_*",
+    "CSession_CtrlPkt_Proc",
+    "CSession_DataPkt_Proc",
+    "Cmd*",
+    "*Cmd",
+    "CSession_DataPkt_Proc", // struct, inbuf == [cmd, ....]; cmd => { 0xf1d0: PktSeq_seqSet, 0xf1d1: PktAck_ackSet }
+    "PktSeq_seqSet",
+    "Send_Pkt_DrwAck",
   ];
+  const spam = ["XQP2P_Check_Buffer", "P2P_ChannelBufferCheck", "create_android_logger"];
 
   const replaced = replaceFunctions();
 
@@ -111,7 +161,8 @@ function doReplaceFunctions() {
         onEnter: (args) => {
           indent = indent + 1;
           let flag = !replaced.includes(dbg.name) ? "[NOT REPLACED] " : "";
-          console.log(" ".repeat(indent) + flag + dbg.name);
+          if (!dbg.name.startsWith("create") && !dbg.name.startsWith("pack_"))
+            console.log(" ".repeat(indent) + flag + dbg.name);
         },
         onLeave: (retval) => {
           indent = indent - 1;
@@ -127,6 +178,7 @@ function doHooks() {
     // hook_create_P2pRdy();
     // hook_in_out_buf("create_LstReq", 0x1c, 0x1c);
     //hook_in_out_buf("create_P2pRdy", 0x1c, 0x1c);
+    hook_udpsend();
     doReplaceFunctions();
 
     // hook_p2p_read();
