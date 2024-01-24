@@ -25,8 +25,13 @@ DataView.prototype.readU32 = function () {
 DataView.prototype.readU64 = function () {
   return this.getUint64(0);
 };
+const isDataView = (x: DataView | number[]): x is DataView => {
+  return x instanceof DataView;
+};
+
 DataView.prototype.writeByteArray = function (arr) {
-  for (let i = 0; i < (arr.byteLength || arr.length); i++) {
+  const len = isDataView(arr) ? arr.byteLength : arr.length;
+  for (let i = 0; i < len; i++) {
     this.setUint8(i, arr[i]);
   }
 };
@@ -39,10 +44,23 @@ DataView.prototype.readByteArray = function (len) {
 };
 
 const Memory = {
-  alloc: (len) => new DataView(new ArrayBuffer(len + 1)),
-  copy: (outbuf, inbuf, len) => outbuf.writeByteArray(inbuf.readByteArray(len)),
+  alloc: (len: number) => new DataView(new ArrayBuffer(len + 1)),
+  copy: (outbuf: DataView, inbuf: DataView, len: number) => outbuf.writeByteArray(inbuf.readByteArray(len)),
 };
 
-//module.exports = {
-//  Memory,
-//};
+declare global {
+  interface DataView {
+    add(offset: number): DataView;
+    readByteArray(len: number): DataView;
+    readU16(): undefined;
+    readU32(): undefined;
+    readU64(): undefined;
+    readU8(): undefined;
+    writeByteArray(arr: DataView | number[]): undefined;
+    writeU16(n: number): undefined;
+    writeU32(n: number): undefined;
+    writeU64(n: number): undefined;
+    writeU8(n: number): undefined;
+  }
+}
+export default global;
