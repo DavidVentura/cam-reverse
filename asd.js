@@ -141,6 +141,8 @@ function doReplaceFunctions() {
     "pack_*",
     "CSession_CtrlPkt_Proc",
     "CSession_DataPkt_Proc",
+    "CSession_*_Deal",
+    "PktSeq_seqSet",
     "Cmd*",
     "*Cmd",
     "CSession_DataPkt_Proc", // struct, inbuf == [cmd, ....]; cmd => { 0xf1d0: PktSeq_seqSet, 0xf1d1: PktAck_ackSet }
