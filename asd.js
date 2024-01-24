@@ -1,5 +1,5 @@
-import { replaceFunctions, Commands, CommandsByValue, u16_swap } from "./func_replacements.js";
-import { placeholderTypes, sprintf } from "./utils.js";
+import { replaceFunctions, Commands, CommandsByValue } from "./func_replacements.js";
+import { placeholderTypes, sprintf, u16_swap } from "./utils.js";
 
 const hook_fn = (name_in_elf, enter, leave) => {
   var symbol_addr = DebugSymbol.fromName(name_in_elf).address;

@@ -21,3 +21,19 @@ export const sprintf = (str, values) => {
     })
     .join("");
 };
+export const u16_swap = (x) => ((x & 0xff00) >> 8) | ((x & 0x00ff) << 8);
+export const swap_endianness_u16 = (ptr) => {
+  const bytes = ptr.readU16();
+  const swapped = [(bytes & 0xff00) >> 8, bytes & 0x00ff];
+  return swapped;
+};
+export const swap_endianness_u32 = (ptr) => {
+  const bytes = ptr.readU32();
+  const swapped = [
+    (bytes & 0xff000000) >> 24,
+    (bytes & 0x00ff0000) >> 16,
+    (bytes & 0x0000ff00) >> 8,
+    bytes & 0x000000ff,
+  ];
+  return swapped;
+};

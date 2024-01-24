@@ -1,84 +1,4 @@
-export const u16_swap = (x) => ((x & 0xff00) >> 8) | ((x & 0x00ff) << 8);
-
-export const XqBytesDec = (inoutbuf, buflen, rotate) => {
-  let new_buf = new Uint8Array(buflen);
-  new_buf.fill(0x1);
-  for (let i = 0; i < buflen; i++) {
-    let b = inoutbuf.add(i).readU8();
-    if ((b & 1) != 0) {
-      new_buf[i] = b - 1;
-    } else {
-      new_buf[i] = b + 1;
-    }
-  }
-  for (let i = rotate; i < buflen; i++) {
-    inoutbuf.add(i).writeU8(new_buf[i - rotate]);
-  }
-  for (let i = 0; i < rotate; i++) {
-    inoutbuf.add(i).writeU8(new_buf[buflen - rotate + i]);
-  }
-};
-export const XqBytesEnc = (inoutbuf, buflen, rotate) => {
-  let new_buf = new Uint8Array(buflen);
-  new_buf.fill(0x1);
-  for (let i = 0; i < buflen; i++) {
-    let b = inoutbuf.add(i).readU8();
-    if ((b & 1) != 0) {
-      new_buf[i] = b - 1;
-    } else {
-      new_buf[i] = b + 1;
-    }
-  }
-  for (let i = 0; i < buflen - rotate; i++) {
-    inoutbuf.add(i).writeU8(new_buf[i + rotate]);
-  }
-  for (let i = 0; i < rotate; i++) {
-    inoutbuf.add(buflen - rotate + i).writeU8(new_buf[i]);
-  }
-};
-
-const swap_endianness_u16 = (ptr) => {
-  const bytes = ptr.readU16();
-  const swapped = [(bytes & 0xff00) >> 8, bytes & 0x00ff];
-  return swapped;
-};
-const swap_endianness_u32 = (ptr) => {
-  const bytes = ptr.readU32();
-  const swapped = [
-    (bytes & 0xff000000) >> 24,
-    (bytes & 0x00ff0000) >> 16,
-    (bytes & 0x0000ff00) >> 8,
-    bytes & 0x000000ff,
-  ];
-  return swapped;
-};
-
-const compare_buf = (a, b, len) => {
-  console.log(`comparin len ${len}`);
-  const ba = new Uint8Array(a.readByteArray(len));
-  const bb = new Uint8Array(b.readByteArray(len));
-
-  let deltas = new Uint8Array(len);
-  let bad = false;
-  for (let i = 0; i < len; i++) {
-    if (ba[i] == bb[i]) {
-      deltas[i] = 0;
-    } else {
-      deltas[i] = 0xff;
-      bad = true;
-    }
-  }
-  if (bad) {
-    console.log("deltas");
-    console.log(deltas.buffer);
-    console.log("buf a");
-    console.log(ba.buffer);
-    console.log("buf b");
-    console.log(bb.buffer);
-    console.log("####");
-  }
-};
-
+import { swap_endianness_u32, swap_endianness_u16, u16_swap } from "./utils.js";
 export const Commands = {
   Close: 0xf1f0,
   LanSearchExt: 0xf132,
@@ -109,6 +29,77 @@ export const CommandsByValue = Object.keys(Commands).reduce((acc, cur) => {
   return acc;
 }, {});
 
+const writeCommand2 = (command, buf) => {
+  buf.writeByteArray([(command & 0xff00) >> 8, command & 0xff]);
+};
+const writeCommand4 = (command, buf) => {
+  buf.writeByteArray([(command & 0xff00) >> 8, command & 0xff, 0x00, 0x00]);
+};
+
+export const XqBytesDec = (inoutbuf, buflen, rotate) => {
+  let new_buf = new Uint8Array(buflen);
+  new_buf.fill(0x1);
+  for (let i = 0; i < buflen; i++) {
+    let b = inoutbuf.add(i).readU8();
+    if ((b & 1) != 0) {
+      new_buf[i] = b - 1;
+    } else {
+      new_buf[i] = b + 1;
+    }
+  }
+  for (let i = rotate; i < buflen; i++) {
+    inoutbuf.add(i).writeU8(new_buf[i - rotate]);
+  }
+  for (let i = 0; i < rotate; i++) {
+    inoutbuf.add(i).writeU8(new_buf[buflen - rotate + i]);
+  }
+};
+
+export const XqBytesEnc = (inoutbuf, buflen, rotate) => {
+  let new_buf = new Uint8Array(buflen);
+  new_buf.fill(0x1);
+  for (let i = 0; i < buflen; i++) {
+    let b = inoutbuf.add(i).readU8();
+    if ((b & 1) != 0) {
+      new_buf[i] = b - 1;
+    } else {
+      new_buf[i] = b + 1;
+    }
+  }
+  for (let i = 0; i < buflen - rotate; i++) {
+    inoutbuf.add(i).writeU8(new_buf[i + rotate]);
+  }
+  for (let i = 0; i < rotate; i++) {
+    inoutbuf.add(buflen - rotate + i).writeU8(new_buf[i]);
+  }
+};
+
+const compare_buf = (a, b, len) => {
+  console.log(`comparin len ${len}`);
+  const ba = new Uint8Array(a.readByteArray(len));
+  const bb = new Uint8Array(b.readByteArray(len));
+
+  let deltas = new Uint8Array(len);
+  let bad = false;
+  for (let i = 0; i < len; i++) {
+    if (ba[i] == bb[i]) {
+      deltas[i] = 0;
+    } else {
+      deltas[i] = 0xff;
+      bad = true;
+    }
+  }
+  if (bad) {
+    console.log("deltas");
+    console.log(deltas.buffer);
+    console.log("buf a");
+    console.log(ba.buffer);
+    console.log("buf b");
+    console.log(bb.buffer);
+    console.log("####");
+  }
+};
+
 const reply_Drw = (inbuf, outbuf) => {
   /*
   -> cmd = inbuf+10
@@ -134,13 +125,6 @@ const pack_P2pHdr = (inbuf, out_buf) => {
   // shitty memcpy
   out_buf.writeByteArray(inbuf.readByteArray(4));
   return 4;
-};
-
-const writeCommand2 = (command, buf) => {
-  buf.writeByteArray([(command & 0xff00) >> 8, command & 0xff]);
-};
-const writeCommand4 = (command, buf) => {
-  buf.writeByteArray([(command & 0xff00) >> 8, command & 0xff, 0x00, 0x00]);
 };
 const create_Close = (buf) => {
   writeCommand4(Commands.Close, buf);
@@ -202,19 +186,6 @@ const create_P2pReq = (outbuf, inbuf, m_s_addr, addr_fam) => {
 };
 
 const create_LstReq = (outbuf, inbuf) => {
-  /* original
-        in
-                                 0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F
-     0123456789ABCDEF 00000000  42 41 54 43 00 00 00 00 00 09 4c fb 45 58 4c 56
-     BATC......L.EXLV 00000010  53 00 00 00 00 00 00 00 00 00 00 00 S...........
-
-        out
-                                         0  1  2  3  4  5  6  7  8  9  A  B  C
-     D  E  F 0123456789ABCDEF 00000000  f1 67 00 14 00 00 00 00 42 41 54 43 00
-     00 00 00 .g......BATC.... 00000010  00 09 4c fb 45 58 4c 56 53 00 00 00
-     ..L.EXLVS... retval 0x18
-
-        */
   const LISTREQ_SIZE = 0x14;
   writeCommand2(Commands.LstReq, outbuf);
   outbuf.add(2).writeU16(LISTREQ_SIZE << 8);
@@ -250,25 +221,6 @@ const dbg_create_Drw = (og_func) => {
     //   `2: ${idk_param2.toString(16)} 3: ${idk_param3.toString(16)} 4:
     //   ${idk_param4.toString(16)} copylen: ${copy_len}`,
     //);
-    /*
-         * 2: ffffffd1 3: 0 4: 3100 copylen: 44
-            In buffer
-                               0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F
-         0123456789ABCDEF 00000000  11 0a 31 10 24 00 00 00 75 39 4c 74 01 01 01
-         01
-         ..1.$...u9Lt.... 00000010  01 01 01 01 01 01 01 01 01 01 01 01 01 01 01
-         01
-         ................ 00000020  01 01 01 01 01 01 01 01 01 01 01 00
-         ............ OG retval 52 OG out buffer 0  1  2  3  4  5  6  7  8  9  A
-         B  C  D  E  F 0123456789ABCDEF 00000000  f1 d0 00 30 00 00 00 00 d1 00
-         00 31 11 0a 31 10
-         ...0.......1..1. 00000010  24 00 00 00 75 39 4c 74 01 01 01 01 01 01 01
-         01
-         $...u9Lt........ 00000020  01 01 01 01 01 01 01 01 01 01 01 01 01 01 01
-         01
-         ................ 00000030  01 01 01 01
-            */
-
     const copy_len_swapped = u16_swap(copy_len + 4);
     writeCommand2(Commands.Drw, outbuf);
     outbuf.add(2).writeU16(copy_len_swapped);
@@ -284,11 +236,6 @@ const dbg_pack_ClntPkt = (og_func) => {
   const pack_ClntPkt = (addr_fam, inbuf, outbuf) => {
     const cmd = u16_swap(inbuf.readU16());
     console.log(`pack_ClntPkt: cmd 0x${cmd.toString(16)} = ${CommandsByValue[cmd]}; fam ${addr_fam}; inbuf =>`);
-    // console.log(inbuf.readByteArray(16));
-
-    // const ret = og_func(addr_fam, inbuf, outbuf);
-
-    // const new_outbuf = Memory.alloc(ret);
     const hdrLen = pack_P2pHdr(inbuf, outbuf);
     const packFn = {
       [Commands.LanSearch]: () => hdrLen,
@@ -307,12 +254,10 @@ const dbg_pack_ClntPkt = (og_func) => {
       },
     };
     /*
-          // No PackClnt?
-          P2PAlive: 0xf1e0,
-          P2PAliveAck: 0xf1e1,
-
-          P2pRdy: 0xf142, // idk??
-          */
+	  P2PAlive: 0xf1e0,
+	  P2PAliveAck: 0xf1e1,
+	  P2pRdy: 0xf142, // idk??
+	  */
 
     const fn = packFn[cmd];
     if (fn == undefined) {
@@ -425,18 +370,3 @@ export const replaceFunctions = () => {
   replacements.forEach((x) => replace_func(...x));
   return replacements.map((x) => x[0].name.replace("dbg_", ""));
 };
-
-const setMemory = (m) => {
-  global.Memory = m;
-};
-/*
-module.exports = {
-  replaceFunctions,
-  u16_swap,
-  Commands,
-  CommandsByValue,
-  reply_Drw,
-  replace_func,
-  setMemory,
-};
-*/
