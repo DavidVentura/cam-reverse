@@ -2,7 +2,7 @@ export const u16_swap = (x) => ((x & 0xff00) >> 8) | ((x & 0x00ff) << 8);
 
 const swap_endianness_u16 = (ptr) => {
   const bytes = ptr.readU16();
-  const swapped = [(bytes & 0xff00) >> 8, bytes & 0x00ff];
+  const swapped = [ (bytes & 0xff00) >> 8, bytes & 0x00ff ];
   return swapped;
 };
 const swap_endianness_u32 = (ptr) => {
@@ -43,28 +43,28 @@ const compare_buf = (a, b, len) => {
 };
 
 export const Commands = {
-  Close: 0xf1f0,
-  LanSearchExt: 0xf132,
-  LanSearch: 0xf130,
-  P2PAlive: 0xf1e0,
-  P2PAliveAck: 0xf1e1,
-  Hello: 0xf100,
-  P2pRdy: 0xf142,
-  P2pReq: 0xf120,
-  LstReq: 0xf167,
-  DrwAck: 0xf1d1,
-  Drw: 0xf1d0,
+  Close : 0xf1f0,
+  LanSearchExt : 0xf132,
+  LanSearch : 0xf130,
+  P2PAlive : 0xf1e0,
+  P2PAliveAck : 0xf1e1,
+  Hello : 0xf100,
+  P2pRdy : 0xf142,
+  P2pReq : 0xf120,
+  LstReq : 0xf167,
+  DrwAck : 0xf1d1,
+  Drw : 0xf1d0,
 
   // From CSession_CtrlPkt_Proc, incomplete
-  PunchTo: 0xf140,
-  PunchPkt: 0xf141,
-  HelloAck: 0xf101,
-  RlyTo: 0xf102,
-  DevLgnAck: 0xf111,
-  P2PReqAck: 0xf121,
-  ListenReqAck: 0xf169,
-  RlyHelloAck: 0xf170, // always
-  RlyHelloAck2: 0xf171, // if len >1??
+  PunchTo : 0xf140,
+  PunchPkt : 0xf141,
+  HelloAck : 0xf101,
+  RlyTo : 0xf102,
+  DevLgnAck : 0xf111,
+  P2PReqAck : 0xf121,
+  ListenReqAck : 0xf169,
+  RlyHelloAck : 0xf170,  // always
+  RlyHelloAck2 : 0xf171, // if len >1??
 };
 
 export const CommandsByValue = Object.keys(Commands).reduce((acc, cur) => {
@@ -80,13 +80,14 @@ export const reply_Drw = (inbuf, outbuf) => {
   -> Send_Pkt_DrwAck(10,0xd2,channel,1,&cmd_,sock_fd,ipaddr_);
     -> create_DrwAck(bare_drwack, 0xd2, chan, halflen??, inbuf)
     -> pack_P2pHdr(bare_drwack, pkt_hdr)
-    -> pack_DrwAck(bare_drwack+4, len = swapped(bare_drwack[1]), pkt_hdr + hdr_len)
+    -> pack_DrwAck(bare_drwack+4, len = swapped(bare_drwack[1]), pkt_hdr +
+  hdr_len)
     -> send_udp(pkt_hdr, max(hdr_len, 0x20)??)
    */
   const chan = inbuf.add(9).readU16();
   const cmd = inbuf.add(10).readU16();
   const param2 = 0xd2; // ?
-  const half_len = 1; //FIXME
+  const half_len = 1;  // FIXME
   const bare_ack = Memory.alloc(half_len * 2 + 8);
   create_DrwAck(bare_ack, param2, chan, half_len, inbuf);
   const hdr_len = pack_P2pHdr(bare_ack, outbuf);
@@ -99,10 +100,10 @@ const pack_P2pHdr = (inbuf, out_buf) => {
 };
 
 const writeCommand2 = (command, buf) => {
-  buf.writeByteArray([(command & 0xff00) >> 8, command & 0xff]);
+  buf.writeByteArray([ (command & 0xff00) >> 8, command & 0xff ]);
 };
 const writeCommand4 = (command, buf) => {
-  buf.writeByteArray([(command & 0xff00) >> 8, command & 0xff, 0x00, 0x00]);
+  buf.writeByteArray([ (command & 0xff00) >> 8, command & 0xff, 0x00, 0x00 ]);
 };
 const create_Close = (buf) => {
   writeCommand4(Commands.Close, buf);
@@ -133,16 +134,20 @@ const create_Hello = (buf) => {
   return 4;
 };
 
+// 							 : Pointer
 const create_P2pRdy = (outbuf, inbuf) => {
   // TODO: this is literlly the same as create_LstReq, just different command
   const P2PRDY_SIZE = 0x14;
   writeCommand2(Commands.P2pRdy, outbuf);
+  // outbuf[2] = P2PRDY_SIZE
   outbuf.add(2).writeU16(P2PRDY_SIZE << 8);
   outbuf.add(8).writeU64(inbuf.readU64());
   outbuf.add(16).writeU64(inbuf.add(8).readU64());
   outbuf.add(2 * 0xc).writeU32(inbuf.add(16).readU32());
   return P2PRDY_SIZE + 4;
 };
+
+create_P2pRdy(new ArrayBuffer(16), ...);
 
 const create_P2pReq = (outbuf, inbuf, m_s_addr, addr_fam) => {
   const P2PREQ_SIZE = 0x24;
@@ -156,7 +161,8 @@ const create_P2pReq = (outbuf, inbuf, m_s_addr, addr_fam) => {
   outbuf.add(2 * 0xf).writeByteArray(swap_endianness_u16(m_s_addr.add(2)));
 
   outbuf.add(2 * 0x12).writeU64(0);
-  outbuf.add(2 * 0x10).writeByteArray(swap_endianness_u32(m_s_addr.add(4))); // ip address
+  outbuf.add(2 * 0x10).writeByteArray(
+      swap_endianness_u32(m_s_addr.add(4))); // ip address
 
   return P2PREQ_SIZE + 4;
 };
@@ -186,7 +192,8 @@ const create_LstReq = (outbuf, inbuf) => {
   // 0xc * sizeof(short)
   outbuf.add(2 * 0xc).writeU32(inbuf.add(0x10).readU32());
 
-  return LISTREQ_SIZE + 4; // this is actually wrong (and unused) in the code -- it is 0x1c
+  return LISTREQ_SIZE +
+         4; // this is actually wrong (and unused) in the code -- it is 0x1c
 };
 
 const create_DrwAck = (outbuf, idk_param2, channel, half_len, inbuf) => {
@@ -203,44 +210,49 @@ const create_DrwAck = (outbuf, idk_param2, channel, half_len, inbuf) => {
 };
 
 const dbg_create_Drw = (og_func) => {
-  const create_Drw = (outbuf, idk_param2, idk_param3, idk_param4, copy_len, inbuf) => {
-    /// idk_param4 goes up by 0x100 per call
+  const create_Drw =
+      (outbuf, idk_param2, idk_param3, idk_param4, copy_len, inbuf) => {
+        /// idk_param4 goes up by 0x100 per call
 
-    // console.log(
-    //   `2: ${idk_param2.toString(16)} 3: ${idk_param3.toString(16)} 4:
-    //   ${idk_param4.toString(16)} copylen: ${copy_len}`,
-    //);
-    /*
-     * 2: ffffffd1 3: 0 4: 3100 copylen: 44
-        In buffer
-                           0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F
-     0123456789ABCDEF 00000000  11 0a 31 10 24 00 00 00 75 39 4c 74 01 01 01 01
-     ..1.$...u9Lt.... 00000010  01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01
-     ................ 00000020  01 01 01 01 01 01 01 01 01 01 01 00 ............
-        OG retval 52
-        OG out buffer
-                           0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F
-     0123456789ABCDEF 00000000  f1 d0 00 30 00 00 00 00 d1 00 00 31 11 0a 31 10
-     ...0.......1..1. 00000010  24 00 00 00 75 39 4c 74 01 01 01 01 01 01 01 01
-     $...u9Lt........ 00000020  01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01
-     ................ 00000030  01 01 01 01
-        */
+        // console.log(
+        //   `2: ${idk_param2.toString(16)} 3: ${idk_param3.toString(16)} 4:
+        //   ${idk_param4.toString(16)} copylen: ${copy_len}`,
+        //);
+        /*
+         * 2: ffffffd1 3: 0 4: 3100 copylen: 44
+            In buffer
+                               0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F
+         0123456789ABCDEF 00000000  11 0a 31 10 24 00 00 00 75 39 4c 74 01 01 01
+         01
+         ..1.$...u9Lt.... 00000010  01 01 01 01 01 01 01 01 01 01 01 01 01 01 01
+         01
+         ................ 00000020  01 01 01 01 01 01 01 01 01 01 01 00
+         ............ OG retval 52 OG out buffer 0  1  2  3  4  5  6  7  8  9  A
+         B  C  D  E  F 0123456789ABCDEF 00000000  f1 d0 00 30 00 00 00 00 d1 00
+         00 31 11 0a 31 10
+         ...0.......1..1. 00000010  24 00 00 00 75 39 4c 74 01 01 01 01 01 01 01
+         01
+         $...u9Lt........ 00000020  01 01 01 01 01 01 01 01 01 01 01 01 01 01 01
+         01
+         ................ 00000030  01 01 01 01
+            */
 
-    const copy_len_swapped = u16_swap(copy_len + 4);
-    writeCommand2(Commands.Drw, outbuf);
-    outbuf.add(2).writeU16(copy_len_swapped);
-    outbuf.add(8).writeU8(0xd1);
-    outbuf.add(10).writeU16(idk_param4);
-    outbuf.add(12).writeByteArray(inbuf.readByteArray(copy_len));
+        const copy_len_swapped = u16_swap(copy_len + 4);
+        writeCommand2(Commands.Drw, outbuf);
+        outbuf.add(2).writeU16(copy_len_swapped);
+        outbuf.add(8).writeU8(0xd1);
+        outbuf.add(10).writeU16(idk_param4);
+        outbuf.add(12).writeByteArray(inbuf.readByteArray(copy_len));
 
-    return copy_len + 8;
-  };
+        return copy_len + 8;
+      };
   return create_Drw;
 };
 const dbg_pack_ClntPkt = (og_func) => {
   const pack_ClntPkt = (addr_fam, inbuf, outbuf) => {
     const cmd = u16_swap(inbuf.readU16());
-    console.log(`pack_ClntPkt: cmd 0x${cmd.toString(16)} = ${CommandsByValue[cmd]}; fam ${addr_fam}; inbuf =>`);
+    console.log(`pack_ClntPkt: cmd 0x${cmd.toString(16)} = ${
+        CommandsByValue[cmd]}; fam ${addr_fam}; inbuf =>`);
     // console.log(inbuf.readByteArray(16));
 
     // const ret = og_func(addr_fam, inbuf, outbuf);
@@ -248,17 +260,19 @@ const dbg_pack_ClntPkt = (og_func) => {
     // const new_outbuf = Memory.alloc(ret);
     const hdrLen = pack_P2pHdr(inbuf, outbuf);
     const packFn = {
-      [Commands.LanSearch]: () => hdrLen,
-      [Commands.LanSearchExt]: () => hdrLen,
-      [Commands.Close]: () => hdrLen,
-      [Commands.Hello]: () => hdrLen,
-      [Commands.P2pReq]: () => hdrLen + pack_P2pReq4(inbuf.add(8), outbuf.add(hdrLen)),
-      [Commands.LstReq]: () => hdrLen + pack_P2pId(inbuf.add(8), outbuf.add(hdrLen)),
-      [Commands.DrwAck]: () => {
+      [Commands.LanSearch] : () => hdrLen,
+      [Commands.LanSearchExt] : () => hdrLen,
+      [Commands.Close] : () => hdrLen,
+      [Commands.Hello] : () => hdrLen,
+      [Commands.P2pReq] : () =>
+          hdrLen + pack_P2pReq4(inbuf.add(8), outbuf.add(hdrLen)),
+      [Commands.LstReq] : () =>
+          hdrLen + pack_P2pId(inbuf.add(8), outbuf.add(hdrLen)),
+      [Commands.DrwAck] : () => {
         const pkt_size = u16_swap(inbuf.add(2).readU16());
         return hdrLen + pack_DrwAck(inbuf.add(8), pkt_size, outbuf.add(hdrLen));
       },
-      [Commands.Drw]: () => {
+      [Commands.Drw] : () => {
         const pkt_size = u16_swap(inbuf.add(2).readU16());
         return hdrLen + pack_Drw(inbuf.add(8), pkt_size, outbuf.add(hdrLen));
       },
@@ -292,7 +306,8 @@ const pack_Drw = (inbuf, m_pkt_size, outbuf) => {
   outbuf.writeU8(inbuf.readU8());
   outbuf.add(1).writeU8(inbuf.add(1).readU8());
   outbuf.add(2).writeU16(inbuf.add(2).readU16());
-  outbuf.add(4).writeByteArray(inbuf.add(4).readByteArray(m_pkt_size - DRW_HDR_SIZE));
+  outbuf.add(4).writeByteArray(
+      inbuf.add(4).readByteArray(m_pkt_size - DRW_HDR_SIZE));
 
   return m_pkt_size;
 };
@@ -304,7 +319,8 @@ const pack_DrwAck = (inbuf, m_pkt_size, outbuf) => {
   outbuf.writeU8(inbuf.readU8());
   outbuf.add(1).writeU8(inbuf.add(1).readU8());
   outbuf.add(2).writeU16(inbuf.add(2).readU16());
-  outbuf.add(4).writeByteArray(inbuf.add(4).readByteArray(m_pkt_size - DRW_ACK_HDR_SIZE));
+  outbuf.add(4).writeByteArray(
+      inbuf.add(4).readByteArray(m_pkt_size - DRW_ACK_HDR_SIZE));
 
   return m_pkt_size;
 };
@@ -340,9 +356,11 @@ export const replace_func = (stub, ret, args) => {
     replacement_func = stub;
   }
 
-  console.log(`Replacing ${name_in_elf}, signature "${ret} ${name_in_elf}(${args})"`);
+  console.log(
+      `Replacing ${name_in_elf}, signature "${ret} ${name_in_elf}(${args})"`);
 
-  Interceptor.replace(symbol_addr, new NativeCallback(replacement_func, ret, args));
+  Interceptor.replace(symbol_addr,
+                      new NativeCallback(replacement_func, ret, args));
 };
 
 /* Send_Pkt_LanSearch =
@@ -360,23 +378,29 @@ export const replace_func = (stub, ret, args) => {
 // CSession_CtrlPkt_Proc(struct, *cmd) == control?
 export const replaceFunctions = () => {
   const replacements = [
-    [create_P2pAlive, "uint8", ["pointer"]],
-    [create_P2pAliveAck, "uint8", ["pointer"]],
-    [create_LanSearch, "uint8", ["pointer"]],
-    [create_LanSearchExt, "uint8", ["pointer"]],
-    [create_Hello, "uint8", ["pointer"]],
-    [create_Close, "uint8", ["pointer"]],
-    [dbg_create_Drw, "uint", ["pointer", "uint64", "uint8", "uint16", "uint32", "pointer"]],
-    [create_DrwAck, "uint", ["pointer", "uint8", "uint8", "uint16", "pointer"]],
-    [create_P2pReq, "uint8", ["pointer", "pointer", "pointer", "uint"]],
-    [create_LstReq, "uint8", ["pointer", "pointer"]],
-    [create_P2pRdy, "uint8", ["pointer", "pointer"]],
-    [pack_P2pHdr, "uint8", ["pointer", "pointer"]],
-    [pack_Drw, "uint8", ["pointer", "uint16", "pointer"]],
-    [pack_DrwAck, "uint8", ["pointer", "uint16", "pointer"]],
-    [pack_P2pId, "uint32", ["pointer", "pointer"]],
-    [pack_P2pReq4, "uint64", ["pointer", "pointer"]],
-    [dbg_pack_ClntPkt, "uint32", ["uint32", "pointer", "pointer"]],
+    [ create_P2pAlive, "uint8", [ "pointer" ] ],
+    [ create_P2pAliveAck, "uint8", [ "pointer" ] ],
+    [ create_LanSearch, "uint8", [ "pointer" ] ],
+    [ create_LanSearchExt, "uint8", [ "pointer" ] ],
+    [ create_Hello, "uint8", [ "pointer" ] ],
+    [ create_Close, "uint8", [ "pointer" ] ],
+    [
+      dbg_create_Drw, "uint",
+      [ "pointer", "uint64", "uint8", "uint16", "uint32", "pointer" ]
+    ],
+    [
+      create_DrwAck, "uint",
+      [ "pointer", "uint8", "uint8", "uint16", "pointer" ]
+    ],
+    [ create_P2pReq, "uint8", [ "pointer", "pointer", "pointer", "uint" ] ],
+    [ create_LstReq, "uint8", [ "pointer", "pointer" ] ],
+    [ create_P2pRdy, "uint8", [ "pointer", "pointer" ] ],
+    [ pack_P2pHdr, "uint8", [ "pointer", "pointer" ] ],
+    [ pack_Drw, "uint8", [ "pointer", "uint16", "pointer" ] ],
+    [ pack_DrwAck, "uint8", [ "pointer", "uint16", "pointer" ] ],
+    [ pack_P2pId, "uint32", [ "pointer", "pointer" ] ],
+    [ pack_P2pReq4, "uint64", [ "pointer", "pointer" ] ],
+    [ dbg_pack_ClntPkt, "uint32", [ "uint32", "pointer", "pointer" ] ],
   ];
 
   replacements.forEach((x) => replace_func(...x));
