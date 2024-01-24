@@ -37,3 +37,12 @@ DataView.prototype.readByteArray = function (len) {
   }
   return ret;
 };
+
+const Memory = {
+  alloc: (len) => new DataView(new ArrayBuffer(len + 1)),
+  copy: (outbuf, inbuf, len) => outbuf.writeByteArray(inbuf.readByteArray(len)),
+};
+
+//module.exports = {
+//  Memory,
+//};

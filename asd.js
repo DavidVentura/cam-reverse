@@ -1,4 +1,5 @@
 import { replaceFunctions, Commands, CommandsByValue, u16_swap } from "./func_replacements.js";
+import { placeholderTypes, sprintf } from "./utils.js";
 
 const hook_fn = (name_in_elf, enter, leave) => {
   var symbol_addr = DebugSymbol.fromName(name_in_elf).address;
@@ -47,8 +48,8 @@ const hook___android_log_print = () => {
       // let _prio = args[0].toInt32();
       let _tag = args[1].readCString();
       let fmt = args[2].readCString();
-      // console.log(fmt); // debug if crashes due to missing placeholder
       const types = placeholderTypes(fmt); // ['s', 'd', ..]`
+      // console.log(fmt, types); // debug if crashes due to missing placeholder
 
       let o = {
         s: (x) => x.readCString(),
@@ -98,6 +99,7 @@ const hook_udpsend = () => {
       }
     },
   );
+
   let s = {};
   hook_fn(
     "PktSeq_seqGet",
@@ -108,6 +110,42 @@ const hook_udpsend = () => {
       const data = s.buf.readByteArray(retval.toInt32());
       console.log(`PktSeq GET ret=${retval}`);
       console.log(data);
+    },
+  );
+
+  let e = {};
+  hook_fn(
+    "XqBytesEnc",
+    (args) => {
+      s.buf_ptr = args[0];
+      s.m_buflen = args[1].toInt32();
+      s.param3 = args[2].toInt32();
+      s.buf_in = s.buf_ptr.readByteArray(s.m_buflen);
+    },
+    (retval) => {
+      const bufout = s.buf_ptr.readByteArray(s.m_buflen);
+      console.log(`XqBytesEnc buflen: ${s.m_buflen}, param3: ${s.param3}, buf_in:`);
+      console.log(s.buf_in);
+      console.log(`bufout`);
+      console.log(bufout);
+    },
+  );
+
+  let d = {};
+  hook_fn(
+    "XqBytesDec",
+    (args) => {
+      s.buf_ptr = args[0];
+      s.m_buflen = args[1].toInt32();
+      s.param3 = args[2].toInt32();
+      s.buf_in = s.buf_ptr.readByteArray(s.m_buflen);
+    },
+    (retval) => {
+      const bufout = s.buf_ptr.readByteArray(s.m_buflen);
+      console.log(`XqBytesDec buflen: ${s.m_buflen}, param3: ${s.param3}, buf_in:`);
+      console.log(s.buf_in);
+      console.log(`bufout`);
+      console.log(bufout);
     },
   );
 };
@@ -190,22 +228,4 @@ function doHooks() {
     console.log("NO WORKING");
   }
 }
-
-const matchy = /%[0-9.-]*([a-z])/g;
-const replacy = /(.*?)%[0-9.-]*([a-z])/g;
-
-const placeholderTypes = (str) => {
-  // '%-16s, line %4d, %-16s:ret=%d,broadcast lan_seach to %s:%.3f!!!!'
-  // =>
-  // [ 's', 'd', 's', 'd', 's', 'f' ]
-  return [...str.matchAll(matchy)].map((m) => m[1]);
-};
-const sprintf = (str, values) => {
-  // '%-16s, line %4d, %-16s:ret=%d,broadcast lan_seach to %s:%.3f!!!!' +
-  // ["asd", 20, ...]
-  // =>
-  // asd, line 20, ...
-  const matches = str.matchAll(replacy);
-  return [...matches].map((m, idx) => m[1] + values[idx].toString()).join("");
-};
 setImmediate(doHooks);
