@@ -9,7 +9,7 @@ venv: requirements.txt
 	touch venv
 
 run: bundle.js venv
-	python3 -u loader3.py
+	./venv/bin/python3 -u loader3.py
 
 install-wireshark-dissector:
 	mkdir -p ~/.local/lib/wireshark/plugins
