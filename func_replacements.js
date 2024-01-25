@@ -136,7 +136,7 @@ const create_LanSearchExt = (buf) => {
   return 4;
 };
 
-const create_LanSearch = (buf) => {
+export const create_LanSearch = (buf) => {
   writeCommand4(Commands.LanSearch, buf);
   return 4;
 };
