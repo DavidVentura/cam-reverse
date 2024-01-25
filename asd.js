@@ -49,7 +49,7 @@ const hook___android_log_print = () => {
       let _tag = args[1].readCString();
       let fmt = args[2].readCString();
       const types = placeholderTypes(fmt); // ['s', 'd', ..]`
-      // console.log(fmt, types); // debug if crashes due to missing placeholder
+      console.log(fmt, types); // debug if crashes due to missing placeholder
 
       let o = {
         s: (x) => x.readCString(),
@@ -113,39 +113,16 @@ const hook_udpsend = () => {
     },
   );
 
-  let e = {};
+  let p = {};
   hook_fn(
-    "XqBytesEnc",
+    "Send_Pkt_P2PRdy",
     (args) => {
-      s.buf_ptr = args[0];
-      s.m_buflen = args[1].toInt32();
-      s.param3 = args[2].toInt32();
-      s.buf_in = s.buf_ptr.readByteArray(s.m_buflen);
+      p.buf = args[1];
     },
     (retval) => {
-      const bufout = s.buf_ptr.readByteArray(s.m_buflen);
-      console.log(`XqBytesEnc buflen: ${s.m_buflen}, param3: ${s.param3}, buf_in:`);
-      console.log(s.buf_in);
-      console.log(`bufout`);
-      console.log(bufout);
-    },
-  );
-
-  let d = {};
-  hook_fn(
-    "XqBytesDec",
-    (args) => {
-      s.buf_ptr = args[0];
-      s.m_buflen = args[1].toInt32();
-      s.param3 = args[2].toInt32();
-      s.buf_in = s.buf_ptr.readByteArray(s.m_buflen);
-    },
-    (retval) => {
-      const bufout = s.buf_ptr.readByteArray(s.m_buflen);
-      console.log(`XqBytesDec buflen: ${s.m_buflen}, param3: ${s.param3}, buf_in:`);
-      console.log(s.buf_in);
-      console.log(`bufout`);
-      console.log(bufout);
+      const data = p.buf.readByteArray(20);
+      console.log(`Send_Pkt_P2PRdy buf`);
+      console.log(data);
     },
   );
 };
@@ -215,7 +192,6 @@ function doHooks() {
   var libnative_addr = Module.findBaseAddress("libvdp.so");
   if (libnative_addr) {
     hook___android_log_print();
-    // hook_create_P2pRdy();
     // hook_in_out_buf("create_LstReq", 0x1c, 0x1c);
     //hook_in_out_buf("create_P2pRdy", 0x1c, 0x1c);
     hook_udpsend();
