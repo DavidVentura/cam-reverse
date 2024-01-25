@@ -6,9 +6,6 @@ title: Establish session
 sequenceDiagram
     App->>+Cam: LanSearch
     Cam->>-App: PunchPkt (SerialNo)
-    App-->>Cam: P2PReq?
-    App-->>Cam: LstReq?
-    App-->>Cam: P2PAlive?
     App->>+Cam: P2PRdy
     Cam->>-App: P2PRdy
    
