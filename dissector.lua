@@ -74,6 +74,15 @@ function my_protocol.dissector(buffer, pinfo, tree)
 		subtree:add_le(my_protocol.fields.cmd, buffer(0xa, 2))
 		local payload_len = buffer(0xc, 2):le_uint()
 		subtree:add_le(my_protocol.fields.cmd_payload_len, buffer(0xc, 2))
+
+		subtree:add(my_protocol.fields.encrypted, payload_len >= 5):set_generated()
+		if buffer(0xb, 1):uint() % 2 == 1 then
+			cmdtype = "ack"
+		else
+			cmdtype = "cmd"
+		end
+		subtree:add(my_protocol.fields.cmd_type, cmdtype):set_generated()
+
 		subtree:add_le(my_protocol.fields.cmd_dest, buffer(0xe, 2))
 		subtree:add(my_protocol.fields.cmd_payload, buffer(0x10, payload_len))
 		-- subtree:add(my_protocol.fields.cmd, buffer(0xc, 2))
