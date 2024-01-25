@@ -1,9 +1,10 @@
-import "../shim.js";
+import "../shim.ts";
 
 import assert from "assert";
 
 import { placeholderTypes, sprintf } from "../utils.js";
 import { XqBytesDec, XqBytesEnc } from "../func_replacements.js";
+import { SendUsrChk } from "../impl.ts";
 
 describe("debug_tools", () => {
   it("parses printed data", () => {
@@ -87,5 +88,15 @@ describe("module", () => {
     assert.deepEqual(new Uint8Array(in_buf.buffer), long_enc_bytes); // ENC
     XqBytesDec(in_buf, long_dec_bytes.byteLength, 4); // this mutates in_buf
     assert.deepEqual(new Uint8Array(in_buf.buffer), long_dec_bytes); //DEC
+  });
+});
+
+const hstrToBA = (hs) => new Uint8Array(hs.match(/../g).map((h) => parseInt(h, 16))).buffer;
+describe("make packet", () => {
+  it("builds a good SendUsrChk", () => {
+    const expected_str =
+      "f1d000b0d1000000110a2010a400ff00000000006f01010101010101010101010101010101010101010101010101010160656c686f01010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010160656c68";
+    const expected = hstrToBA(expected_str);
+    assert.deepEqual(SendUsrChk("admin", "admin").buffer, expected);
   });
 });
