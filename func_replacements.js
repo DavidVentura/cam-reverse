@@ -156,12 +156,11 @@ const create_Hello = (buf) => {
 };
 
 // 							 : Pointer
-const create_P2pRdy = (outbuf, inbuf) => {
+export const create_P2pRdy = (outbuf, inbuf) => {
   // TODO: this is literlly the same as create_LstReq, just different command
   const P2PRDY_SIZE = 0x14;
   writeCommand2(Commands.P2pRdy, outbuf);
-  // outbuf[2] = P2PRDY_SIZE
-  outbuf.add(2).writeU16(P2PRDY_SIZE << 8);
+  outbuf.add(2).writeU16(u16_swap(P2PRDY_SIZE));
   outbuf.add(8).writeU64(inbuf.readU64());
   outbuf.add(16).writeU64(inbuf.add(8).readU64());
   outbuf.add(2 * 0xc).writeU32(inbuf.add(16).readU32());
