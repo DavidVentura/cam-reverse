@@ -55,8 +55,6 @@ export const SendUsrChk = (username: string, password: string): DataView => {
   return retret;
 };
 
-// console.log(hexdump(SendUsrChk("admin", "admin").buffer, { ansi: true }));
-//
 const EstablishSession = () => {
   const ls = create_LanSearch(); // Broadcast
 };
@@ -86,7 +84,13 @@ const MakeSock = (
   server.bind(RECV_PORT);
 
   return {
-    send: (msg: DataView) => server.send(new Uint8Array(msg.buffer), SEND_PORT, DST_IP),
+    send: (msg: DataView) => {
+      const raw = msg.readU16();
+      const cmd = CommandsByValue[raw];
+      console.log(`>> ${cmd}`);
+      console.log(hexdump(msg.buffer, { ansi: true, ansiColor: 0 }));
+      server.send(new Uint8Array(msg.buffer), SEND_PORT, DST_IP);
+    },
     broadcast: (msg: DataView) => server.send(new Uint8Array(msg.buffer), SEND_PORT, BCAST_IP),
   };
 };
@@ -94,9 +98,69 @@ const MakeSock = (
 const notImpl = (sock, dv: DataView) => {
   const raw = dv.readU16();
   const cmd = CommandsByValue[raw];
-  console.log(`Got ${cmd} (${raw.toString(16)}) and it's not implemented yet`);
+  console.log(`^^ ${cmd} (${raw.toString(16)}) and it's not implemented yet`);
 };
 
+const noop = (sock, dv: DataView) => {};
+const create_P2pAliveAck = (): DataView => {
+  const outbuf = new DataView(new Uint8Array(4).buffer);
+  outbuf.writeU16(Commands.P2PAliveAck);
+  outbuf.add(2).writeU16(0);
+  return outbuf;
+};
+
+const create_P2pRdy = (inbuf: DataView): DataView => {
+  const P2PRDY_SIZE = 0x14;
+  const outbuf = new DataView(new Uint8Array(P2PRDY_SIZE + 4).buffer);
+  outbuf.writeU16(Commands.P2pRdy);
+  outbuf.add(2).writeU16(P2PRDY_SIZE);
+  outbuf.add(4).writeByteArray(new Uint8Array(inbuf.readByteArray(P2PRDY_SIZE).buffer));
+  return outbuf;
+};
+
+const handle_Drw = (sock, dv: DataView) => {
+  // TODO
+  // INPUT
+  // byte 4 = d1 or d2, just add 1
+  // byte 5 = stream??
+  // byte 6-7 = pkt id
+  // OUTPUT
+  // f1d1
+  // 2b len
+  // d1/d2 +1 (always d2?)
+  // 2b ack'd packets (1 for now, no coalescing)
+  // N times 2b with packet id
+  const should_be_d1 = dv.add(4).readU8();
+  const m_stream = dv.add(5).readU8();
+  const pkt_id = dv.add(6).readU16();
+  console.log("DRW", should_be_d1, m_stream, pkt_id);
+
+  const item_count = 1; // TODO
+  const reply_len = item_count * 2 + 4; // 4 hdr, 2b per item
+  const outbuf = new DataView(new Uint8Array(32).buffer);
+  outbuf.writeU16(Commands.DrwAck);
+  outbuf.add(2).writeU16(reply_len);
+  outbuf.add(4).writeU16(0xd2);
+  outbuf.add(6).writeU16(item_count);
+  for (let i = 0; i < item_count; i++) {
+    outbuf.add(8 + i * 2).writeU16(pkt_id);
+  }
+  sock.send(outbuf);
+  // CSession_Drw_Deal
+  //   set some stuff?
+  //   return a counter with pkt # ??
+  //   stream: 0 control
+  //           1 data?? video+aud
+  // Send_Pkt_DrwAck(10,0xd2,channel,1,&cmd_,sock_fd,ipaddr_);
+};
+const handle_P2PRdy = (sock, dv: DataView) => {
+  const b = SendUsrChk("admin", "admin");
+  sock.send(b);
+};
+const handle_P2PAlive = (sock, dv: DataView) => {
+  const b = create_P2pAliveAck();
+  sock.send(b);
+};
 const handle_PunchPkt = (sock, dv: DataView) => {
   console.log(`Got a nice punchpkt`);
   const punchCmd = dv.readU16();
@@ -106,6 +170,7 @@ const handle_PunchPkt = (sock, dv: DataView) => {
   const suffix = dv.add(16).readString(4);
   // f141 20 BATC 609531 EXLV
   console.log(punchCmd.toString(16), len, prefix, serial, suffix);
+  sock.send(create_P2pRdy(dv.add(4).readByteArray(len)));
 };
 
 export const Handlers: Record<keyof typeof Commands, (sock: any, dv: DataView) => void> = {
@@ -115,14 +180,14 @@ export const Handlers: Record<keyof typeof Commands, (sock: any, dv: DataView) =
   Close: notImpl,
   LanSearchExt: notImpl,
   LanSearch: notImpl,
-  P2PAlive: notImpl,
+  P2PAlive: handle_P2PAlive,
   P2PAliveAck: notImpl,
   Hello: notImpl,
-  P2pRdy: notImpl,
+  P2pRdy: handle_P2PRdy,
   P2pReq: notImpl,
   LstReq: notImpl,
-  DrwAck: notImpl,
-  Drw: notImpl,
+  DrwAck: noop,
+  Drw: handle_Drw,
 
   // From CSession_CtrlPkt_Proc, incomplete
   PunchTo: notImpl,
@@ -139,8 +204,9 @@ const sock = MakeSock((msg, rinfo) => {
   const ab = new Uint8Array(msg).buffer;
   const dv = new DataView(ab);
   const cmd = CommandsByValue[dv.readU16()];
-  console.log(`from ${rinfo.address}:${rinfo.port}, server got ${cmd}`);
-  console.log(hexdump(ab));
+  // ${rinfo.address}:${rinfo.port}
+  console.log(`<< ${cmd}`);
+  console.log(hexdump(ab, { useAnsi: true, ansiColor: 1 }));
   Handlers[cmd](sock, dv);
 });
 
