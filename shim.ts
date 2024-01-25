@@ -11,7 +11,7 @@ DataView.prototype.writeU32 = function (val) {
   return this.setUint32(0, val);
 };
 DataView.prototype.writeU64 = function (val) {
-  return this.setUint64(0, val);
+  return this.setBigUint64(0, val);
 };
 DataView.prototype.readU8 = function () {
   return this.getUint8(0);
@@ -23,7 +23,7 @@ DataView.prototype.readU32 = function () {
   return this.getUint32(0);
 };
 DataView.prototype.readU64 = function () {
-  return this.getUint64(0);
+  return this.getBigUint64(0);
 };
 const isU8Array = (x: Uint8Array | number[]): x is Uint8Array => {
   return x instanceof Uint8Array;
@@ -42,6 +42,10 @@ DataView.prototype.readByteArray = function (len) {
   }
   return ret;
 };
+DataView.prototype.readString = function (len) {
+  const ba = this.readByteArray(len);
+  return String.fromCharCode.apply(null, new Uint8Array(ba.buffer));
+};
 
 const Memory = {
   alloc: (len: number) => new DataView(new ArrayBuffer(len + 1)),
@@ -53,10 +57,11 @@ declare global {
   interface DataView {
     add(offset: number): DataView;
     readByteArray(len: number): DataView;
-    readU16(): undefined;
-    readU32(): undefined;
-    readU64(): undefined;
-    readU8(): undefined;
+    readString(len: number): string;
+    readU16(): number;
+    readU32(): number;
+    readU64(): number;
+    readU8(): number;
     writeByteArray(arr: Uint8Array | number[]): undefined;
     writeU16(n: number): undefined;
     writeU32(n: number): undefined;
