@@ -1,21 +1,24 @@
 -- Create a new protocol for your custom packets
-my_protocol = Proto("MyProtocol", "My Custom Protocol")
+my_protocol = Proto("myprotocol", "My Custom Protocol")
 
 -- Define the fields you want to display in Wireshark
 my_protocol.fields = {}
-my_protocol.fields.type = ProtoField.string("MyProtocol.type", "Type")
-my_protocol.fields.payload = ProtoField.bytes("MyProtocol.payload", "Data")
-my_protocol.fields.len = ProtoField.uint16("MyProtocol.len", "Len", base.HEX)
+my_protocol.fields.type = ProtoField.string("myprotocol.type", "Type")
+my_protocol.fields.payload = ProtoField.bytes("myprotocol.payload", "Data")
+my_protocol.fields.len = ProtoField.uint16("myprotocol.len", "Len", base.HEX)
 
-my_protocol.fields.m_type 		= ProtoField.uint8("MyProtocol.m_type", "Stream Type", base.HEX)
-my_protocol.fields.m_stream_id 	= ProtoField.uint8("MyProtocol.m_stream_id", "Stream ID", base.HEX)
-my_protocol.fields.elem_count	= ProtoField.uint16("MyProtocol.elem_count", "Elem count", base.DEC)
+my_protocol.fields.m_type 		= ProtoField.uint8("myprotocol.m_type", "Stream Type", base.HEX)
+my_protocol.fields.m_stream_id 	= ProtoField.uint8("myprotocol.m_stream_id", "Stream ID", base.HEX)
+my_protocol.fields.elem_count	= ProtoField.uint16("myprotocol.elem_count", "Elem count", base.DEC)
 
-my_protocol.fields.cmd_payload_len = ProtoField.uint16("MyProtocol.cmd_payload_len", "CMD Payload Len", base.HEX)
-my_protocol.fields.cmd = ProtoField.uint16("MyProtocol.cmd", "CMD", base.HEX)
-my_protocol.fields.start = ProtoField.uint16("MyProtocol.start", "Start", base.HEX)
-my_protocol.fields.cmd_dest = ProtoField.uint16("MyProtocol.cmd_dest", "Dest", base.HEX)
-my_protocol.fields.cmd_payload = ProtoField.bytes("MyProtocol.payload", "Payload", base.DASH)
+my_protocol.fields.cmd_payload_len 	= ProtoField.uint16("myprotocol.cmd_payload_len", "CMD Payload Len", base.HEX)
+my_protocol.fields.cmd 				= ProtoField.uint16("myprotocol.cmd", "CMD", base.HEX)
+my_protocol.fields.start 			= ProtoField.uint16("myprotocol.start", "Start", base.HEX)
+my_protocol.fields.cmd_dest 		= ProtoField.uint16("myprotocol.cmd_dest", "Dest", base.HEX)
+my_protocol.fields.cmd_payload 		= ProtoField.bytes("myprotocol.payload", "Payload", base.DASH)
+
+my_protocol.fields.encrypted 		= ProtoField.bool("myprotocol.encrypted", "Encrypted")
+my_protocol.fields.cmd_type 		= ProtoField.string("myprotocol.payload", "Cmd Pkt Type")
 
 lut = {
     [0xf1f0] = "Close",
@@ -55,7 +58,7 @@ function my_protocol.dissector(buffer, pinfo, tree)
 	subtree:add(my_protocol.fields.type, packetname)
 
 	-- Set the protocol description in the packet list
-	pinfo.cols.protocol:set("MyProtocol")
+	pinfo.cols.protocol:set("myprotocol")
 	if packetname == "DrwAck" then
 		subtree:add(my_protocol.fields.len, buffer(2, 2))
 		subtree:add(my_protocol.fields.m_type, buffer(4, 1))
