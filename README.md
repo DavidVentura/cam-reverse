@@ -20,6 +20,8 @@ To execute the server, run `make run`; JPEG files will be created in a folder na
 
 The protocol is weirdly complex, though very little communication is necessary to use the device
 
+
+To establish a session, a few _control packets_ are sent.
 ```mermaid
 ---
 title: Establish session
@@ -39,6 +41,12 @@ sequenceDiagram
         App-->>-Cam: P2PAliveAck
     end
 ```
+
+To start a stream, a single _control packet_ is sent.
+
+The received stream is broken up into 1028 byte payloads, along with a sequence number.
+
+Stitching the payloads together yields JPEG frames for video, and (TBD) for audio.
 
 ```mermaid
 ---
