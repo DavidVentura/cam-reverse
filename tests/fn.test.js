@@ -2,9 +2,10 @@ import "../shim.ts";
 
 import assert from "assert";
 
-import { placeholderTypes, sprintf } from "../utils.js";
 import { XqBytesDec, XqBytesEnc } from "../func_replacements.js";
 import { SendUsrChk } from "../impl.ts";
+import { placeholderTypes, sprintf } from "../utils.js";
+import { hexdump } from "../hexdump.js";
 
 describe("debug_tools", () => {
   it("parses printed data", () => {
@@ -17,6 +18,12 @@ describe("debug_tools", () => {
     const fmt = "string: %s, int: %d, float: %f, hexint: %02x, newline: \n\n last int: %d";
     const in_values = ["potato", 5, 3.5, 0x20, 999];
     const expected_string = "string: potato, int: 5, float: 3.5, hexint: 0x20, newline: \n\n last int: 999";
+    assert.deepEqual(sprintf(fmt, in_values), expected_string);
+  });
+  it("prints leftover after last formatter", () => {
+    const fmt = "string: %s and this bit is also printed";
+    const in_values = ["potato"];
+    const expected_string = "string: potato and this bit is also printed";
     assert.deepEqual(sprintf(fmt, in_values), expected_string);
   });
 });
@@ -87,7 +94,7 @@ describe("module", () => {
     XqBytesEnc(in_buf, long_dec_bytes.byteLength, 4); // this mutates in_buf
     assert.deepEqual(new Uint8Array(in_buf.buffer), long_enc_bytes); // ENC
     XqBytesDec(in_buf, long_dec_bytes.byteLength, 4); // this mutates in_buf
-    assert.deepEqual(new Uint8Array(in_buf.buffer), long_dec_bytes); //DEC
+    assert.deepEqual(new Uint8Array(in_buf.buffer), long_dec_bytes); // DEC
   });
 });
 
