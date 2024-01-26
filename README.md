@@ -14,7 +14,12 @@ The headers reversed with Ghidra are at `types/all.h`. They are almost not used 
 
 The hooks used with frida are at `frida-hooks.js`, but it's mostly a playground - some useful functions got deleted once I understood the protocol.
 
+There's also a pretty crappy Wireshark dissector at `dissector.lua`. You can install it with `make install-wireshark-dissector`.
+
+## Running
 To execute the server, run `make run`; JPEG files will be created in a folder named `captures`.
+
+There's no live-stream server built into this project yet.
 
 ## Protocol
 
