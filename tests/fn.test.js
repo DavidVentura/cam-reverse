@@ -69,6 +69,22 @@ describe("module", () => {
     0x00, 0x00, 0x00, 0x00, 0x30, 0x2e, 0x30, 0x2e, 0x30, 0x2e, 0x30, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x30, 0x2e, 0x30, 0x2e, 0x30, 0x2e, 0x30, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
   ]);
+  it("encrypts without rotation", () => {
+    const in_buf = new DataView(new Uint8Array([1, 2, 3, 4]).buffer);
+    XqBytesEnc(in_buf, in_buf.byteLength, 0); // this mutates in_buf
+    assert.equal(in_buf.add(0).readU8(), 0);
+    assert.equal(in_buf.add(1).readU8(), 3);
+    assert.equal(in_buf.add(2).readU8(), 2);
+    assert.equal(in_buf.add(3).readU8(), 5);
+  });
+  it("decrypts without rotation", () => {
+    const in_buf = new DataView(new Uint8Array([1, 2, 3, 4]).buffer);
+    XqBytesDec(in_buf, in_buf.byteLength, 0); // this mutates in_buf
+    assert.equal(in_buf.add(0).readU8(), 0);
+    assert.equal(in_buf.add(1).readU8(), 3);
+    assert.equal(in_buf.add(2).readU8(), 2);
+    assert.equal(in_buf.add(3).readU8(), 5);
+  });
   it("decrypts simple input", () => {
     const in_buf = new DataView(simple_enc_bytes.buffer.slice(0));
     XqBytesDec(in_buf, simple_enc_bytes.byteLength, 4); // this mutates in_buf
