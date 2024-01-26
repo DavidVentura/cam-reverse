@@ -16,6 +16,44 @@ The hooks used with frida are at `frida-hooks.js`, but it's mostly a playground 
 
 To execute the server, run `make run`; JPEG files will be created in a folder named `captures`.
 
+## Protocol
+
+The protocol is weirdly complex, though very little communication is necessary to use the device
+
+```mermaid
+---
+title: Establish session
+---
+
+sequenceDiagram
+	autonumber
+    App->>+Cam: LanSearch
+    Cam->>-App: PunchPkt (SerialNo)
+    App->>+Cam: P2PRdy
+    Cam->>-App: P2PRdy
+    App->>+Cam: ConnectUser
+    Cam->>-App: ConnectUserAck (Video Token)
+   
+   loop Every 400-500ms
+        Cam-->>+App: P2PAlive
+        App-->>-Cam: P2PAliveAck
+    end
+```
+
+```mermaid
+---
+title: Stream audio/video
+---
+
+sequenceDiagram
+    App->>Cam: StreamStart (with Token)
+   
+   loop
+        Cam-->>+App: Audio/Video Payload
+        App-->>-Cam: DrwAck
+    end
+```
+
 ### Take APK from emulator/sacrificial device
 ```
 adb shell pm list packages | grep ysx
