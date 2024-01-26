@@ -1,6 +1,7 @@
 Re-implementation of the "ilnk" protocol used on some cheap chinese cameras (sometimes branded as 'A9').
 
 * Bought [here](https://www.aliexpress.com/item/1005006287788979.html).
+  * Waiting for [this A9 camera](https://www.aliexpress.com/item/1005006117593880.html) to validate support.
 * App is [YsxLite](https://play.google.com/store/apps/details?id=com.ysxlite.cam&hl=en&gl=US)
 
 
