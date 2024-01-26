@@ -130,17 +130,36 @@ const handle_Drw = (sock, dv: DataView) => {
   // d1/d2 +1 (always d2?)
   // 2b ack'd packets (1 for now, no coalescing)
   // N times 2b with packet id
+  /*
+   *
+	00000000  f1 d0 00 18 d1 00 00 00 11 0a 20 11 0c 00 ff 00  .......... .....
+	00000010  00 00 00 00 34 54 63 4d fe 01 01 01              ....4TcM....
+	                      ^^^^^^^^^^^^^^
+						  some kind of challenge
+						  need to send the 0x3010 command with this
+						  but add 1 to every byte
+	*/
   const should_be_d1 = dv.add(4).readU8();
   const m_stream = dv.add(5).readU8();
   const pkt_id = dv.add(6).readU16();
-  console.log("DRW", should_be_d1, m_stream, pkt_id);
+  const start_type = dv.add(8).readU16(); // 0xa11
+  const cmd_id = dv.add(10).readU16(); // 0x1120
+  console.log("DRW", should_be_d1, m_stream, pkt_id, start_type.toString(16), cmd_id.toString(16));
+
+  if (cmd_id == 0x2011) {
+    challenge[0] = dv.add(0x14).readU8();
+    challenge[1] = dv.add(0x15).readU8();
+    challenge[2] = dv.add(0x16).readU8();
+    challenge[3] = dv.add(0x17).readU8();
+  }
 
   const item_count = 1; // TODO
   const reply_len = item_count * 2 + 4; // 4 hdr, 2b per item
   const outbuf = new DataView(new Uint8Array(32).buffer);
   outbuf.writeU16(Commands.DrwAck);
   outbuf.add(2).writeU16(reply_len);
-  outbuf.add(4).writeU16(0xd2);
+  outbuf.add(4).writeU8(0xd2);
+  outbuf.add(5).writeU8(m_stream);
   outbuf.add(6).writeU16(item_count);
   for (let i = 0; i < item_count; i++) {
     outbuf.add(8 + i * 2).writeU16(pkt_id);
