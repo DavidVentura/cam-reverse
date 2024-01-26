@@ -1,6 +1,7 @@
 import "./shim.ts";
 
-import { Commands, XqBytesEnc } from "./func_replacements.js";
+import { XqBytesEnc } from "./func_replacements.js";
+import { Commands } from "./datatypes.js";
 import { u16_swap } from "./utils.js";
 
 const str2byte = (s: string): number[] => {

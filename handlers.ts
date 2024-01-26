@@ -1,5 +1,5 @@
 import { sock } from "./server.js";
-import { Commands, CommandsByValue } from "./func_replacements.js";
+import { ControlCommands, Commands, CommandsByValue } from "./datatypes.js";
 import { createWriteStream } from "node:fs";
 import { SendUsrAck, SendUsrChk, create_P2pRdy } from "./impl.js";
 
@@ -95,11 +95,6 @@ const deal_with_data = (dv: DataView) => {
     image_fds[cur_image_index - 1].write(Buffer.from(data.buffer));
     size_so_far += pkt_len - 4;
   }
-};
-
-const ControlCommands = {
-  ConnectUser: 0x2010,
-  ConnectUserAck: 0x2011,
 };
 
 const makeDrwAck = (dv: DataView): DataView => {

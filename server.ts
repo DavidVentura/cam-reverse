@@ -1,5 +1,6 @@
 import dgram from "node:dgram";
-import { create_LanSearch, Commands, CommandsByValue } from "./func_replacements.js";
+import { create_LanSearch } from "./func_replacements.js";
+import { Commands, CommandsByValue } from "./datatypes.js";
 import { handle_P2PAlive, handle_PunchPkt, handle_P2PRdy, handle_Drw, notImpl, noop } from "./handlers.js";
 import { hexdump } from "./hexdump.js";
 
@@ -54,7 +55,6 @@ const MakeSock = (cb: msgCb, connCb: connCb, options?: opt): sock => {
 };
 
 const Handlers: Record<keyof typeof Commands, (sock: sock, dv: DataView) => void> = {
-  // FIXME: keys are 'any' bc import?
   PunchPkt: handle_PunchPkt,
 
   Close: notImpl,
