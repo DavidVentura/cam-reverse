@@ -175,6 +175,45 @@ const handle_Drw = (sock, dv: DataView) => {
 const handle_P2PRdy = (sock, dv: DataView) => {
   const b = SendUsrChk("admin", "admin");
   sock.send(b);
+  setTimeout(() => {
+    /*
+	00000000  f1 d0 01 14 d1 00 00 90 11 0a 10 30 08 01 00 00  ...........0....
+	00000010  77 78 35 69 01 01 01 01                          wx5i....
+
+	00000000  f1 d0 01 14 d1 00 00 04 11 0a 10 30 08 01 00 00  ...........0....
+	00000010  55 58 36 59 01 01 01 01                          UX6Y....
+	*/
+    let buf = new DataView(new Uint8Array(0x18).buffer);
+    const seq = 0x1;
+    let bytes = [
+      0xf1,
+      0xd0,
+      0x01,
+      0x14,
+      0xd1,
+      0x00,
+      0x00,
+      seq,
+      0x11,
+      0x0a,
+      0x10,
+      0x30,
+      0x08,
+      0x01,
+      0x00,
+      0x00,
+      challenge[0] % 2 == 0 ? challenge[0] + 1 : challenge[0] - 1,
+      challenge[1] % 2 == 0 ? challenge[1] + 1 : challenge[1] - 1,
+      challenge[2] % 2 == 0 ? challenge[2] + 1 : challenge[2] - 1,
+      challenge[3] % 2 == 0 ? challenge[3] + 1 : challenge[3] - 1,
+      0x01,
+      0x01,
+      0x01,
+      0x01,
+    ];
+    buf.writeByteArray(bytes);
+    sock.send(buf);
+  }, 100);
 };
 const handle_P2PAlive = (sock, dv: DataView) => {
   const b = create_P2pAliveAck();
