@@ -231,6 +231,64 @@ const dbg_create_Drw = (og_func) => {
   };
   return create_Drw;
 };
+const dbg__ZN12CPPPPChannel10CmdSndPushEiiPci = (og_func) => {
+  const CmdSndPush = (_this, dest, cmdtype, idk, cmdlen) => {
+    console.log("CmdSndPush", _this, dest.toString(16), cmdtype.toString(16), idk, cmdlen);
+    //CmdSndPush 0x1020 ret: 172
+    //CmdSndPush 0x1040 ret: 92
+    //CmdSndPush 0x50ff ret: 564
+    //CmdSndPush 0x1008 ret: 12
+    //
+    //if (cmdtype == 0x1020) return 172; // mask
+    if (cmdtype == 0x1040) return 92; // mask
+    if (cmdtype == 0x50ff) return 564; // mask
+    if (cmdtype == 0x1008) return 12; // mask
+
+    let ret = og_func(_this, dest, cmdtype, idk, cmdlen);
+    console.log(`CmdSndPush 0x${cmdtype.toString(16)} ret: ${ret}`);
+    return ret;
+  };
+  return CmdSndPush;
+};
+
+const dbg__Z9SystemCmdP7_JNIEnvPciiP8_jobject = (og_func) => {
+  // "pointer", "pointer", "uint32", "uint32", "pointer"
+  const AvCmd = (java_class, p2pid, sit, cmd, java_param) => {
+    console.log("SystemCmd", java_class, p2pid.readCString(), sit, cmd.toString(16), java_param);
+    if (cmd == 0x3018) return 20; // mask
+    if (cmd == 0x3019) return 12; // mask
+    if (cmd == 0x3005) return 12; // mask
+    if (cmd == 0x3026) return 0; // mask
+    if (cmd == 0x3001) return 12;
+    if (cmd == 0x3003) return 12;
+
+    //if (cmd == 0x3011) return 272; // this is STOP !!
+    //if (cmd == 0x3010) return 272; // borks
+    let ret = og_func(java_class, p2pid, sit, cmd, java_param);
+    console.log(`SystemCmd 0x${cmd.toString(16)} ret: ${ret}`);
+    return ret;
+  };
+  return AvCmd;
+};
+const dbg__Z5AvCmdP7_JNIEnvPciiP8_jobject = (og_func) => {
+  // "pointer", "pointer", "uint32", "uint32", "pointer"
+  const AvCmd = (java_class, p2pid, sit, cmd, java_param) => {
+    console.log("AvCmd", java_class, p2pid.readCString(), sit, cmd.toString(16), java_param);
+    if (cmd == 0x3018) return 20; // mask
+    if (cmd == 0x3019) return 12; // mask
+    if (cmd == 0x3005) return 12; // mask
+    if (cmd == 0x3026) return 0; // mask
+    if (cmd == 0x3001) return 12;
+    if (cmd == 0x3003) return 12;
+
+    //if (cmd == 0x3011) return 272; // this is STOP !!
+    //if (cmd == 0x3010) return 272; // borks
+    let ret = og_func(java_class, p2pid, sit, cmd, java_param);
+    console.log(`AvCmd 0x${cmd.toString(16)} ret: ${ret}`);
+    return ret;
+  };
+  return AvCmd;
+};
 const dbg_pack_ClntPkt = (og_func) => {
   const pack_ClntPkt = (addr_fam, inbuf, outbuf) => {
     const cmd = u16_swap(inbuf.readU16());
@@ -364,6 +422,9 @@ export const replaceFunctions = () => {
     [pack_P2pId, "uint32", ["pointer", "pointer"]],
     [pack_P2pReq4, "uint64", ["pointer", "pointer"]],
     [dbg_pack_ClntPkt, "uint32", ["uint32", "pointer", "pointer"]],
+    [dbg__Z5AvCmdP7_JNIEnvPciiP8_jobject, "uint32", ["pointer", "pointer", "uint32", "uint32", "pointer"]],
+    [dbg__Z9SystemCmdP7_JNIEnvPciiP8_jobject, "uint32", ["pointer", "pointer", "uint32", "uint32", "pointer"]],
+    [dbg__ZN12CPPPPChannel10CmdSndPushEiiPci, "uint64", ["pointer", "uint32", "uint32", "pointer", "uint32"]],
   ];
 
   replacements.forEach((x) => replace_func(...x));
