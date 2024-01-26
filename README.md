@@ -1,4 +1,4 @@
-Reversing a camera
+Re-implementation of the "ilnk" protocol used on some cheap chinese cameras (sometimes branded as 'A9').
 
 * Bought [here](https://www.aliexpress.com/item/1005006287788979.html).
 * App is [YsxLite](https://play.google.com/store/apps/details?id=com.ysxlite.cam&hl=en&gl=US)
@@ -6,8 +6,15 @@ Reversing a camera
 
 Per [pictures](https://github.com/DavidVentura/cam-reverse/blob/master/pics/pcb.jpg?raw=true) the main chip is TXW817 ([chinese](https://www.taixin-semi.com/Product/ProductDetail?productId=306), [eng, google translate](https://www-taixin--semi-com.translate.goog/Product/ProductDetail?productId=306&_x_tr_sl=auto&_x_tr_tl=en&_x_tr_hl=en&_x_tr_pto=wapp))
 
-The interesting implementation is in `libvdp.so`, part of the apk bundle. This repo uses Frida for live analysis of the .so file.
+The interesting implementation is in `libvdp.so`, part of the apk bundle.
 
+Protocol reversing was done with a combination of static analysis of the shared object with [Ghidra](https://ghidra-sre.org/) and dynamic analysis with [Frida](https://frida.re/docs/javascript-api/).
+
+The headers reversed with Ghidra are at `types/all.h`. They are almost not used by this minimal implementation though.
+
+The hooks used with frida are at `frida-hooks.js`, but it's mostly a playground - some useful functions got deleted once I understood the protocol.
+
+To execute the server, run `make run`; JPEG files will be created in a folder named `captures`.
 
 ### Take APK from emulator/sacrificial device
 ```

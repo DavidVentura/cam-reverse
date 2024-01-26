@@ -1,7 +1,7 @@
 .PHONY: run hook install-wireshark-dissector test
 
-bundle.js: asd.js func_replacements.js
-	~/node_modules/.bin/frida-compile -o $@ asd.js
+bundle.js: frida-hooks.js func_replacements.js
+	~/node_modules/.bin/frida-compile -o $@ frida-hooks.js
 
 venv: requirements.txt
 	python3.11 -m venv venv
