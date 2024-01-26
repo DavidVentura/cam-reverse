@@ -1,0 +1,275 @@
+Discovery:
+
+SEND LanSearch
+SEND P2pReq
+SEND LstReq
+SEND LanSearch
+RECV PunchPkt
+SEND P2pRdy
+SEND P2pReq
+SEND P2PAlive
+SEND P2pReq
+RECV P2pRdy
+RECV P2PAlive
+SEND P2PAliveAck
+SEND LstReq
+SEND Drw
+RECV DrwAck
+RECV Drw
+SEND DrwAck
+SEND LanSearchExt
+SEND LanSearch
+SEND Drw
+RECV DrwAck
+RECV Drw
+SEND DrwAck
+RECV Drw
+SEND DrwAck
+RECV Drw
+SEND DrwAck
+RECV P2PAlive
+SEND P2PAliveAck
+
+
+
+On Drw
+-> cmd = inbuf+10
+-> chan = inbuf+9
+-> param2 = lock ? 0xd1 : 0xd2 (never lock branch) => 0xd2
+-> Send_Pkt_DrwAck(10,0xd2,channel,1,&cmd_,sock_fd,ipaddr_);
+  -> create_DrwAck(bare_drwack, 0xd2, chan, halflen??, inbuf)
+  -> pack_P2pHdr(bare_drwack, pkt_hdr)
+  -> pack_DrwAck(bare_drwack+4, len = swapped(bare_drwack[1]), pkt_hdr + hdr_len)
+  -> send_udp(pkt_hdr, max(hdr_len, 0x20)??)
+
+
+peerPlayBackTh
+  UDP PKT RECV, cmd=Drw, 0xf1d0, ret=0x3e8
+             0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F  0123456789ABCDEF
+  00000000  f1 d0 03 e4 d1 01 00 00 55 aa 15 a8 06 02 00 00  ........U.......
+  ...
+  000003e0  d0 d1 d6 d7 d4 d4 d4 d4                          ........
+
+
+0x03e4 = pkt len (wihtout 4b header?)
+
+"type" is 0x3?? (0xf1 0xd0 _0x03_)
+frame indicator is "0xa815aa55"
+acc_pkt_multi starts on "0x55" (first 8 bytes skipped?)
+- check for:
+  - NOT 0x2 as uint on +5 offset (video?? longer packets)
+  - NOT 0x6 as 1 byte at +4 offset => AUDIO !!
+https://usermanual.wiki/Document/C20Series20CGI20Guide.1745954698.pdf
+
+frame len is the 4th uint32 on acc_pkt_multi = bytes 0x18-0x1B
+
+frame maybe starts at 0x28?
+
+
+##############################
+liveVideoRcvTh
+
+for video
+  00000000  f1 d0 04 04 d1 01 00 ce ff d8 ff db 00 84 00 06  ................
+
+0x0404 len?
+ff d8 ff db = jpeg
+
+#tail --bytes=+9 maybe.bin > out
+incomeplte (out1.png)
+
+the 8th byte (0xce) is a sequence. restart on new jpeg header?
+
+
+and EOF 
+0000   f1 d0 00 8c d1 01 01 82 c8 a6 03 b4 f3 4e 04 11
+0010   4d 61 48 b6 32 42 3a d4 3d 4d 48 fd 6a 31 d6 a9
+0020   3b 19 ca c2 f5 a7 27 06 93 02 94 1e 68 b0 87 9a
+0030   05 27 7a 70 3d a9 0d 83 74 a8 19 4e ee b5 2b 36
+0040   2a 36 a1 0a 4f 99 0d 20 53 0f 06 82 4e 69 bc e6
+0050   9a 33 6e e4 80 e7 a5 3d 4e 2a 35 e2 9c 3a d0 c6
+0060   a4 90 fd b9 6a 93 70 5e 05 43 c8 34 e5 e5 a9 bf
+0070   74 71 77 2c 29 e2 9c 1f 11 c9 c9 24 a9 a8 49 c7
+0080   15 2c 44 6f 14 9e a6 91 69 49 5c ff d9 00 00 00
+
+
+where `ff d9` marks end of stream
+
+
+DrwAck = 
+0000   f1 d1 00 12 d2 01 00 07 00 00 00 01 00 02 00 03   ................
+0010   00 04 00 05 00 06 00 00 00 00 00 00 00 00 00 00   ................
+
+=>
+0xf1d1 DrwAck
+0x0012 "copy len + 4" => byte# after 0x00 0x07 = 0x7*2
+0xd2 = type?ack? unclear
+0x1 = stream probably
+0x7 = item count
+0x0 - 0x6 = ack'd packets
+0x0 ... = padding til 0x20?
+
+Another DrwAck =
+0000   f1 d1 00 18 d2 01 00 0a 00 03 00 04 00 05 00 06   ................
+0010   00 07 00 08 00 09 00 0a 00 0b 00 0c 00 00 00 00   ................
+
+0x18 = ???? "copy len +4" = 0x14 = 0xa*2
+0xa = item count
+0x0 ... = padding til 0x20?
+
+ACK packets go out every 10ms
+each packets acknowledges.. 18ms? => have seen up to 9 acked packets, 12 max
+
+
+
+how to trigger video transfer?
+0xf1 d0?
+
+
+### other shit uhld/vhoenvr/bnl  = add/remove 1 "encryption"
+### => https://bitsandbinaries.wordpress.com/net-programming/windows-forms/encryption-software-the-art-of-encrypting/
+### => 'time.windows.com'
+
+certain commands (5th byte after 0xa11 >= 5?) are encrypted (4 byte rotation):
+```
+      if (*(ushort *)((long)also_pkt + 4) < 5) {
+        m_pkt_len = *(ushort *)((long)also_pkt + 2);
+      }
+      else {
+        XqBytesDec((ushort *)((long)also_pkt + 0xc),*(ushort *)((long)also_pkt + 4) - 4,4);
+        m_pkt_len = *(ushort *)((long)also_pkt + 2);
+      }
+
+```
+
+
+
+0x3000....0x3041 NON CONTIGUOUS = parseFileInfo
+0x3018 = parseCameraCtrl
+
+
+0xf1d0
+
+commands (CmdSndPush)
+  hdr: CmdHdrBuild:
+    id: 0xa11
+	cmdtype (0x1020)
+	len+4 (+4 from ExtCmdHdrBuild)
+	dest (0x00ff)
+
+cmdtypes:
+ - 0x1020: SendUsrChk
+
+ SessionGet:session id is BATC-609531-EXLVS,gParam.sessionNmb=8
+ ->
+   Send_Pkt_P2PRdy buf
+             0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F  0123456789ABCDEF
+  00000000  42 41 54 43 00 00 00 00 00 09 4c fb 45 58 4c 56  BATC......L.EXLV
+  00000010  53 00 00 00
+  where the 8 bytes 00 00 00 00 00 09 4c fb = 609531
+
+  no trailing S?
+
+
+
+  UDP PKT RECV, cmd=PunchPkt, 0xf141, ret=0x18
+             0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F  0123456789ABCDEF
+  00000000  f1 41 00 14 42 41 54 43 00 00 00 00 00 09 4c fb  .A..BATC......L.
+  00000010  45 58 4c 56 53 00 00 00                          EXLVS...
+
+
+cmtypes:
+0x0a11 = "CMD_START_CODE"
+IOCmdRecvProcess, pkt = 0x0a11
+
+encrypted =  (*(ushort *)((long)also_pkt + 4) < 5)
+		  = payload_len > 5 ??
+		  BECAUSE IT ROTATES BY 4
+		  => decrypt starting at 0xc
+
+if (cmd >> 8) & 1 == 0 => cmd else ack
+
+cmd (/ack) RcvProc:
+  - cmd >> 12:
+    - 1: Sys
+	  - 0x1008: no idea
+	    - 0x1108: no idea ack?
+	  - 0x1020: ListenUserCheck - send admin creds
+	    - 0x1120: ConnectUserCheckAck
+	  - 0x1040: parseDateTime (send NTP) => CmdExecute
+	   - 0x1141: RcvNTP ?
+	- 2: Sd
+	- 3: Av
+		- 0x3010: start video
+		- 0x3011: stop video
+	- 4: File
+	- 5: Pass
+	  - 0x50ff
+	- 6: Net
+	- 7: Msg
+
+
+dataRcv:  CSession_DataPkt_Proc
+f1 d0 04 04 d1 01 <seq short>
+               ^ data? when 0 cmd
+
+
+to trigger, AvCmd
+
+AvCmd 0x7cb0eed0b0 BATC609531EXLVS 0 3018 0x7fef46821c
+AvCmd 0x3018 ret: 20
+AvCmd 0x7cb0eed0b0 BATC609531EXLVS 0 3018 0x7fef46821c
+AvCmd 0x3018 ret: 20
+AvCmd 0x7cb0eed0b0 BATC609531EXLVS 0 3010 0x7fef46821c
+AvCmd 0x3010 ret: 272
+AvCmd 0x7cb0f232f0 BATC609531EXLVS 0 3019 0x0
+AvCmd 0x7cb0fca6b0 BATC609531EXLVS 0 3010 0x7b23a03dbc
+AvCmd 0x7cb0f01530 BATC609531EXLVS 0 3005 0x0
+AvCmd 0x3019 ret: 12
+AvCmd 0x3005 ret: 12
+AvCmd 0x3010 ret: 272
+AvCmd 0x7cb0f05cb0 BATC609531EXLVS 0 3026 0x7b479836ec
+AvCmd 0x3026 ret: 0
+
+
+still works after disabling:
+0x3018
+0x3019
+0x3005
+0x3026
+0x3001
+0x3003
+
+
+disabling 3010 = no video
+disabling 3011 = video does not stop when hitting back
+
+-- just sending the 3010 pkt is not enough, maybe setup?
+
+BinCmd
+0x1020 adminadmin
+0x50ff some bcast?
+
+SysCmd necessary:
+
+0x1008 ?
+0x1040 - ntp
+
+CmdSndPush 0x7d30f4b9a0 ff 1020 0x7bdf1a7a18 160
+CmdSndPush 0x1020 ret: 172
+CmdSndPush 0x7d30f4b9a0 0 1040 0x7b44169790 80
+CmdSndPush 0x1040 ret: 92
+CmdSndPush 0x7d30f4b9a0 0 50ff 0x7cd0f36920 552
+CmdSndPush 0x50ff ret: 564
+CmdSndPush 0x7d30f4b9a0 0 1008 0x0 0
+CmdSndPush 0x1008 ret: 12
+
+disabling 0x1020, never move past off P2PRdy (DrwAck missing)
+
+
+SystemCmd 0x7cb0f3f5f0 BATC609531EXLVS 0 1040 0x7b4448971c
+SystemCmd 0x7cb0f4c850 BATC609531EXLVS 0 1008 0x0
+AvcLIB = src/object_jni.cpp, line 653, SystemCmd:[p2pID=BATC609531EXLVS]SystemCmd=0x1008
+AvcLIB = src/object_jni.cpp, line 653, SystemCmd:[p2pID=BATC609531EXLVS]SystemCmd=0x1040
+SystemCmd 0x1008 ret: 12
+SystemCmd 0x1040 ret: 92
