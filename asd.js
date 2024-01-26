@@ -49,7 +49,7 @@ const hook___android_log_print = () => {
       let _tag = args[1].readCString();
       let fmt = args[2].readCString();
       const types = placeholderTypes(fmt); // ['s', 'd', ..]`
-      console.log(fmt, types); // debug if crashes due to missing placeholder
+      // console.log(fmt, types); // debug if crashes due to missing placeholder
 
       let o = {
         s: (x) => x.readCString(),
@@ -113,18 +113,39 @@ const hook_udpsend = () => {
     },
   );
 
-  let p = {};
+  /*
   hook_fn(
-    "Send_Pkt_P2PRdy",
+    "_Z10ackRcvProcP12CPPPPChannelP7_JNIEnvP8_jstringP17_CMD_CHANNEL_HEAD",
     (args) => {
-      p.buf = args[1];
+      const param1 = args[0];
+      const pvar5 = args[2];
+      const pkt = args[3];
+      console.log("ackRcvProc: pvar5:");
+      console.log(pvar5.toInt32());
+      console.log("pkt:");
+      console.log(pkt.readByteArray(4));
+      console.log("param1:");
+      console.log(param1.readByteArray(3345));
     },
-    (retval) => {
-      const data = p.buf.readByteArray(20);
-      console.log(`Send_Pkt_P2PRdy buf`);
-      console.log(data);
-    },
+    (retval) => {},
   );
+
+  hook_fn(
+    "_Z10cmdRcvProcP12CPPPPChannelP7_JNIEnvP8_jstringP17_CMD_CHANNEL_HEAD",
+    (args) => {
+      const param1 = args[0];
+      const pvar5 = args[2];
+      const pkt = args[3];
+      console.log("cmdRcvProc: pvar5:");
+      console.log(pvar5.toInt32());
+      console.log("pkt:");
+      console.log(pkt.readByteArray(4));
+      console.log("param1:");
+      console.log(param1.readByteArray(3345));
+    },
+    (retval) => {},
+  );
+	*/
 };
 
 const hook_in_out_buf = (sym, insize, outsize) => {
