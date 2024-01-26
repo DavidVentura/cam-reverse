@@ -13,13 +13,16 @@ export const sprintf = (str, values) => {
   // =>
   // asd, line 20, ...
   const matches = str.matchAll(replacy);
-  return [...matches]
+  let lastScanned = 0;
+  const s = [...matches]
     .map((m, idx) => {
       const cur = values[idx];
       const val = m.groups.formatter == "x" ? `0x${cur.toString(16)}` : cur.toString();
+      lastScanned = m.index + m[0].length;
       return m.groups.pre + val;
     })
     .join("");
+  return s + str.slice(lastScanned);
 };
 export const u16_swap = (x) => ((x & 0xff00) >> 8) | ((x & 0x00ff) << 8);
 export const swap_endianness_u16 = (ptr) => {
