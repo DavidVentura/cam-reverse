@@ -47,12 +47,6 @@ DataView.prototype.readString = function (len) {
   return String.fromCharCode.apply(null, new Uint8Array(ba.buffer));
 };
 
-const Memory = {
-  alloc: (len: number) => new DataView(new ArrayBuffer(len + 1)),
-  copy: (outbuf: DataView, inbuf: DataView, len: number) =>
-    outbuf.writeByteArray(new Uint8Array(inbuf.readByteArray(len).buffer)),
-};
-
 declare global {
   interface DataView {
     add(offset: number): DataView;

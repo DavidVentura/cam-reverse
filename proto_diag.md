@@ -24,7 +24,7 @@ title: Stream audio/video
 ---
 
 sequenceDiagram
-    App->>Cam: StreamStart (with Token, 0x3010)
+    App->>Cam: StreamStart (with Token)
    
    loop
         Cam-->>+App: Audio/Video Payload
