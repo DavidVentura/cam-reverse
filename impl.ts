@@ -59,9 +59,8 @@ const EstablishSession = () => {
   const ls = create_LanSearch(); // Broadcast
 };
 
-const MakeSock = (
-  cb: (msg: Buffer, rinfo: any) => void,
-): { send: (msg: DataView) => void; broadcast: (msg: DataView) => void } => {
+type sock = { send: (msg: DataView) => void; broadcast: (msg: DataView) => void };
+const MakeSock = (cb: (msg: Buffer, rinfo: any) => void): sock => {
   const server = dgram.createSocket("udp4");
 
   server.on("error", (err) => {
@@ -95,13 +94,13 @@ const MakeSock = (
   };
 };
 
-const notImpl = (sock, dv: DataView) => {
+const notImpl = (sock: sock, dv: DataView) => {
   const raw = dv.readU16();
   const cmd = CommandsByValue[raw];
   console.log(`^^ ${cmd} (${raw.toString(16)}) and it's not implemented yet`);
 };
 
-const noop = (sock, dv: DataView) => {};
+const noop = (sock: sock, dv: DataView) => {};
 const create_P2pAliveAck = (): DataView => {
   const outbuf = new DataView(new Uint8Array(4).buffer);
   outbuf.writeU16(Commands.P2PAliveAck);
@@ -118,7 +117,8 @@ const create_P2pRdy = (inbuf: DataView): DataView => {
   return outbuf;
 };
 
-const handle_Drw = (sock, dv: DataView) => {
+let seen = [0];
+const handle_Drw = (sock: sock, dv: DataView) => {
   // TODO
   // INPUT
   // byte 4 = d1 or d2, just add 1
@@ -172,7 +172,8 @@ const handle_Drw = (sock, dv: DataView) => {
   //           1 data?? video+aud
   // Send_Pkt_DrwAck(10,0xd2,channel,1,&cmd_,sock_fd,ipaddr_);
 };
-const handle_P2PRdy = (sock, dv: DataView) => {
+const challenge = [0, 0, 0, 0];
+const handle_P2PRdy = (sock: sock, dv: DataView) => {
   const b = SendUsrChk("admin", "admin");
   sock.send(b);
   setTimeout(() => {
@@ -215,11 +216,11 @@ const handle_P2PRdy = (sock, dv: DataView) => {
     sock.send(buf);
   }, 100);
 };
-const handle_P2PAlive = (sock, dv: DataView) => {
+const handle_P2PAlive = (sock: sock, dv: DataView) => {
   const b = create_P2pAliveAck();
   sock.send(b);
 };
-const handle_PunchPkt = (sock, dv: DataView) => {
+const handle_PunchPkt = (sock: sock, dv: DataView) => {
   console.log(`Got a nice punchpkt`);
   const punchCmd = dv.readU16();
   const len = dv.add(2).readU16();
@@ -231,7 +232,7 @@ const handle_PunchPkt = (sock, dv: DataView) => {
   sock.send(create_P2pRdy(dv.add(4).readByteArray(len)));
 };
 
-export const Handlers: Record<keyof typeof Commands, (sock: any, dv: DataView) => void> = {
+export const Handlers: Record<keyof typeof Commands, (sock: sock, dv: DataView) => void> = {
   // FIXME: keys are 'any' bc import?
   PunchPkt: handle_PunchPkt,
 
