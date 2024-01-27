@@ -79,3 +79,23 @@ struct sysopr_t {
     uint8_t wifiEnable;
     uint8_t ircut;
 };
+
+struct stream_head_t {
+	unsigned int startcode; // 0xa815aa55
+	char type;
+	char streamid;
+	unsigned short militime;
+	unsigned int sectime;
+	unsigned int frameno;
+	unsigned int len;
+	unsigned char version;
+	unsigned char resolution;
+	unsigned char sessid;
+	unsigned char currsit;
+	unsigned char endflag;
+	char byzone;
+	char channel; //for user in sit
+	char type1;
+	short sample;
+	short index;
+};
