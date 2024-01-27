@@ -61,7 +61,7 @@ sequenceDiagram
     App->>+Cam: [C] P2PRdy
     Cam->>-App: [C] P2PRdy
     App->>+Cam: [C] ConnectUser
-    Cam->>-App: [C] ConnectUserAck (Video Token)
+    Cam->>-App: [C] ConnectUserAck (Ticket)
    
    loop Every 400-500ms
         Cam-->>+App: [C] P2PAlive
@@ -81,7 +81,7 @@ title: Stream audio/video
 ---
 
 sequenceDiagram
-    App->>Cam: [C] StreamStart (with Token)
+    App->>Cam: [C] StreamStart (with Ticket)
    
    loop
         Cam-->>+App: [D] Audio/Video Payload
