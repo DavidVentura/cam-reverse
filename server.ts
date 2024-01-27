@@ -1,8 +1,10 @@
 import dgram from "node:dgram";
+import { createWriteStream } from "node:fs";
 import { create_LanSearch } from "./func_replacements.js";
 import { Commands, CommandsByValue } from "./datatypes.js";
 import { handle_P2PAlive, handle_PunchPkt, handle_P2PRdy, handle_Drw, notImpl, noop } from "./handlers.js";
 import { hexdump } from "./hexdump.js";
+import EventEmitter from "node:events";
 
 export type sock = {};
 
@@ -40,6 +42,7 @@ const makeSession = (cb: msgCb, connCb: connCb, options?: opt): Session => {
   const session: Session = {
     outgoingCommandId: 0,
     ticket: [0, 0, 0, 0],
+    frameEmitter: new EventEmitter(),
     send: (msg: DataView) => {
       const raw = msg.readU16();
       const cmd = CommandsByValue[raw];
@@ -63,6 +66,7 @@ export type Session = {
   broadcast: (msg: DataView) => void;
   outgoingCommandId: number;
   ticket: number[];
+  frameEmitter: EventEmitter;
 };
 
 export type PacketHandler = (session: Session, dv: DataView) => void;
@@ -92,7 +96,7 @@ const Handlers: Record<keyof typeof Commands, PacketHandler> = {
   RlyHelloAck2: notImpl, // if len >1??
 };
 
-makeSession(
+const s = makeSession(
   (session, msg, _, options) => {
     const ab = new Uint8Array(msg).buffer;
     const dv = new DataView(ab);
@@ -110,5 +114,15 @@ makeSession(
       session.broadcast(buf);
     }, 1000);
   },
-  { debug: true, ansi: false },
+  { debug: false, ansi: false },
 );
+
+let cur_image_index = 0;
+s.frameEmitter.on("frame", (frame: Buffer) => {
+  const fname = `captures/${cur_image_index.toString().padStart(4, "0")}.jpg`;
+  let cur_image = createWriteStream(fname);
+  cur_image_index++;
+  cur_image.write(frame);
+  cur_image.close();
+  console.log("got an entire frame", frame.length);
+});

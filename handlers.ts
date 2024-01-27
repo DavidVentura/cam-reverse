@@ -1,12 +1,8 @@
-import { createWriteStream } from "node:fs";
-
 import { Commands, CommandsByValue, ControlCommands } from "./datatypes.js";
 import { create_P2pRdy, SendStartVideo, SendUsrChk } from "./impl.js";
 import { Session } from "./server.js";
 
-let image_fds = [];
-let cur_image_index = 0;
-let size_so_far = 0;
+let curImage = null;
 
 export const notImpl = (_: Session, dv: DataView) => {
   const raw = dv.readU16();
@@ -56,7 +52,7 @@ export const createResponseForControlCommand = (session: Session, dv: DataView):
   }
 };
 
-const deal_with_data = (dv: DataView) => {
+const deal_with_data = (session: Session, dv: DataView) => {
   const pkt_len = dv.add(2).readU16();
   // data
   const JPEG_HEADER = [0xff, 0xd8, 0xff, 0xdb];
@@ -72,21 +68,15 @@ const deal_with_data = (dv: DataView) => {
   if (audio) {
     // TODO audio pkt
   } else {
-    if (is_new_image) {
-      size_so_far = 0;
-      if (cur_image_index > 0) {
-        image_fds[cur_image_index - 1].close();
-      }
-      const fname = `captures/${cur_image_index.toString().padStart(4, "0")}.jpg`;
-      let cur_image = createWriteStream(fname);
-      cur_image.cork();
-      image_fds[cur_image_index] = cur_image;
-      cur_image_index++;
-    }
-
     const data = dv.add(8).readByteArray(pkt_len - 4);
-    image_fds[cur_image_index - 1].write(Buffer.from(data.buffer));
-    size_so_far += pkt_len - 4;
+    if (is_new_image) {
+      if (curImage != null) {
+        session.frameEmitter.emit("frame", curImage);
+      }
+      curImage = Buffer.from(data.buffer);
+    } else {
+      curImage = Buffer.concat([curImage, Buffer.from(data.buffer)]);
+    }
   }
 };
 
@@ -112,7 +102,7 @@ export const handle_Drw = (session: Session, dv: DataView) => {
 
   const m_stream = dv.add(5).readU8(); // data = 1, control = 0
   if (m_stream == 1) {
-    deal_with_data(dv);
+    deal_with_data(session, dv);
   } else {
     const b = createResponseForControlCommand(session, dv);
     if (b != null) {
