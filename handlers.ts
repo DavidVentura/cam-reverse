@@ -1,19 +1,19 @@
-import { sock } from "./server.js";
+import { Session } from "./server.js";
 import { ControlCommands, Commands, CommandsByValue } from "./datatypes.js";
 import { createWriteStream } from "node:fs";
-import { SendUsrAck, SendUsrChk, create_P2pRdy } from "./impl.js";
+import { SendStartVideo, SendUsrChk, create_P2pRdy } from "./impl.js";
 
 let image_fds = [];
 let cur_image_index = 0;
 let size_so_far = 0;
 
-export const notImpl = (_: sock, dv: DataView) => {
+export const notImpl = (_: Session, dv: DataView) => {
   const raw = dv.readU16();
   const cmd = CommandsByValue[raw];
   console.log(`^^ ${cmd} (${raw.toString(16)}) and it's not implemented yet`);
 };
 
-export const noop = (_: sock, __: DataView) => {};
+export const noop = (_: Session, __: DataView) => {};
 const create_P2pAliveAck = (): DataView => {
   const outbuf = new DataView(new Uint8Array(4).buffer);
   outbuf.writeU16(Commands.P2PAliveAck);
@@ -21,21 +21,22 @@ const create_P2pAliveAck = (): DataView => {
   return outbuf;
 };
 
-export const handle_P2PAlive = (sock: sock, _: DataView) => {
+export const handle_P2PAlive = (session: Session, _: DataView) => {
   const b = create_P2pAliveAck();
-  sock.send(b);
+  session.send(b);
 };
-export const handle_PunchPkt = (sock: sock, dv: DataView) => {
+export const handle_PunchPkt = (session: Session, dv: DataView) => {
   const punchCmd = dv.readU16();
   const len = dv.add(2).readU16();
   const prefix = dv.add(4).readString(4);
   const serial = dv.add(8).readU64().toString();
   const suffix = dv.add(16).readString(4);
   // f141 20 BATC 609531 EXLV
-  sock.send(create_P2pRdy(dv.add(4).readByteArray(len)));
+  session.send(create_P2pRdy(dv.add(4).readByteArray(len)));
 };
 
-const deal_with_control = (sock: sock, dv: DataView) => {
+export const createResponseForControlCommand = (session: Session, dv: DataView): DataView | null => {
+  const pkt_id = dv.add(6).readU16();
   const start_type = dv.add(8).readU16(); // 0xa11 on control; data starts here on DATA pkt
   const cmd_id = dv.add(10).readU16(); // 0x1120
 
@@ -58,8 +59,8 @@ const deal_with_control = (sock: sock, dv: DataView) => {
     challenge[1] = dv.add(0x15).readU8();
     challenge[2] = dv.add(0x16).readU8();
     challenge[3] = dv.add(0x17).readU8();
-    const buf = SendUsrAck(challenge);
-    sock.send(buf);
+    const buf = SendStartVideo(session.outgoingCommandId, challenge);
+    return buf;
   }
 };
 
@@ -113,19 +114,22 @@ const makeDrwAck = (dv: DataView): DataView => {
   }
   return outbuf;
 };
-export const handle_Drw = (sock: sock, dv: DataView) => {
+export const handle_Drw = (session: Session, dv: DataView) => {
   const ack = makeDrwAck(dv);
-  sock.send(ack);
+  session.send(ack);
 
   const m_stream = dv.add(5).readU8(); // data = 1, control = 0
   if (m_stream == 1) {
     deal_with_data(dv);
   } else {
-    deal_with_control(sock, dv);
+    const b = createResponseForControlCommand(session, dv);
+    if (b != null) {
+      session.send(b);
+    }
   }
 };
 
-export const handle_P2PRdy = (sock: sock, _: DataView) => {
-  const b = SendUsrChk("admin", "admin");
-  sock.send(b);
+export const handle_P2PRdy = (session: Session, _: DataView) => {
+  const b = SendUsrChk("admin", "admin", session.outgoingCommandId);
+  session.send(b);
 };

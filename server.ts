@@ -4,43 +4,42 @@ import { Commands, CommandsByValue } from "./datatypes.js";
 import { handle_P2PAlive, handle_PunchPkt, handle_P2PRdy, handle_Drw, notImpl, noop } from "./handlers.js";
 import { hexdump } from "./hexdump.js";
 
-export type sock = {
-  send: (msg: DataView) => void;
-  broadcast: (msg: DataView) => void;
-};
+export type sock = {};
 
 type opt = {
   debug: boolean;
   ansi: boolean;
 };
 
-type msgCb = (msg: Buffer, rinfo: any, options: opt) => void;
-type connCb = () => void;
+type msgCb = (session: Session, msg: Buffer, rinfo: any, options: opt) => void;
+type connCb = (session: Session) => void;
 
-const MakeSock = (cb: msgCb, connCb: connCb, options?: opt): sock => {
-  const server = dgram.createSocket("udp4");
+const makeSession = (cb: msgCb, connCb: connCb, options?: opt): Session => {
+  const sock = dgram.createSocket("udp4");
 
-  server.on("error", (err) => {
-    console.error(`server error:\n${err.stack}`);
-    server.close();
+  sock.on("error", (err) => {
+    console.error(`sock error:\n${err.stack}`);
+    sock.close();
   });
 
-  server.on("message", (msg, rinfo) => cb(msg, rinfo, options));
+  sock.on("message", (msg, rinfo) => cb(session, msg, rinfo, options));
 
-  server.on("listening", () => {
-    const address = server.address();
-    console.log(`server listening ${address.address}:${address.port}`);
-    server.setBroadcast(true);
-    connCb();
+  sock.on("listening", () => {
+    const address = sock.address();
+    console.log(`sock listening ${address.address}:${address.port}`);
+    sock.setBroadcast(true);
+    connCb(session);
   });
 
   const RECV_PORT = 49512; // important?
   const DST_IP = "192.168.1.1";
   const BCAST_IP = "192.168.1.255";
   const SEND_PORT = 32108;
-  server.bind(RECV_PORT);
+  sock.bind(RECV_PORT);
 
-  return {
+  const session: Session = {
+    outgoingCommandId: 0,
+    ticket: [0, 0, 0, 0],
     send: (msg: DataView) => {
       const raw = msg.readU16();
       const cmd = CommandsByValue[raw];
@@ -48,13 +47,26 @@ const MakeSock = (cb: msgCb, connCb: connCb, options?: opt): sock => {
         console.log(`>> ${cmd}`);
         console.log(hexdump(msg.buffer, { ansi: options.ansi, ansiColor: 0 }));
       }
-      server.send(new Uint8Array(msg.buffer), SEND_PORT, DST_IP);
+      if (raw == Commands.Drw) {
+        // not sure why cmd == Commands.Drw does not work
+        session.outgoingCommandId++;
+      }
+      sock.send(new Uint8Array(msg.buffer), SEND_PORT, DST_IP);
     },
-    broadcast: (msg: DataView) => server.send(new Uint8Array(msg.buffer), SEND_PORT, BCAST_IP),
+    broadcast: (msg: DataView) => sock.send(new Uint8Array(msg.buffer), SEND_PORT, BCAST_IP),
   };
+  return session;
 };
 
-const Handlers: Record<keyof typeof Commands, (sock: sock, dv: DataView) => void> = {
+export type Session = {
+  send: (msg: DataView) => void;
+  broadcast: (msg: DataView) => void;
+  outgoingCommandId: number;
+  ticket: number[];
+};
+
+export type PacketHandler = (session: Session, dv: DataView) => void;
+const Handlers: Record<keyof typeof Commands, PacketHandler> = {
   PunchPkt: handle_PunchPkt,
 
   Close: notImpl,
@@ -80,8 +92,8 @@ const Handlers: Record<keyof typeof Commands, (sock: sock, dv: DataView) => void
   RlyHelloAck2: notImpl, // if len >1??
 };
 
-const sock = MakeSock(
-  (msg, rinfo, options) => {
+makeSession(
+  (session, msg, _, options) => {
     const ab = new Uint8Array(msg).buffer;
     const dv = new DataView(ab);
     const cmd = CommandsByValue[dv.readU16()];
@@ -89,14 +101,14 @@ const sock = MakeSock(
       console.log(`<< ${cmd}`);
       console.log(hexdump(msg.buffer, { ansi: options.ansi, ansiColor: 1 }));
     }
-    Handlers[cmd](sock, dv);
+    Handlers[cmd](session, dv);
   },
-  () => {
+  (session) => {
     const int = setInterval(() => {
       let buf = new DataView(new Uint8Array(4).buffer);
       create_LanSearch(buf);
-      sock.broadcast(buf);
+      session.broadcast(buf);
     }, 1000);
   },
-  { debug: false, ansi: false },
+  { debug: true, ansi: false },
 );

@@ -1,7 +1,8 @@
 import "./shim.ts";
 
-import { XqBytesEnc } from "./func_replacements.js";
 import { Commands } from "./datatypes.js";
+import { XqBytesEnc } from "./func_replacements.js";
+import { hexdump } from "./hexdump.js";
 import { u16_swap } from "./utils.js";
 
 const str2byte = (s: string): number[] => {
@@ -18,28 +19,30 @@ const CmdSndProcHdr = (start: number, cmd: number, len: number, dest: number): D
   return cmdHeader;
 };
 
-const DrwHdr = (cmd: number, len: number, d1_or_d2: 0xd1 | 0xd2, m_chan: number): DataView => {
+const DrwHdr = (cmd: number, len: number, d1_or_d2: 0xd1 | 0xd2, m_chan: number, pkt_id: number): DataView => {
   let retret = new DataView(new Uint8Array(len + 4).buffer);
   retret.writeU16(cmd);
   retret.add(2).writeU16(len); // buflen -4?
-  retret.add(4).writeU16(u16_swap(d1_or_d2));
-  retret.add(6).writeU16(m_chan); // chan? hardcoded
+  retret.add(4).writeU8(d1_or_d2);
+  retret.add(5).writeU8(m_chan); // chan? hardcoded
+  retret.add(6).writeU16(pkt_id);
   return retret;
 };
 
-export const SendUsrAck = (challenge: number[]): DataView => {
+export const SendStartVideo = (pkt_id: number, challenge: number[]): DataView => {
   // TODO: extract SendUsrChk
   let buf = new DataView(new Uint8Array(0x18).buffer);
-  const seq = 0x1;
+  // console.log(hexdump(DrwHdr(0xf1d0, 0x0114, 0xd1, 0, pkt_id).buffer));
+
   let bytes = [
     0xf1,
     0xd0,
-    0x01,
-    0x14,
-    0xd1,
-    0x00,
-    0x00,
-    seq,
+    0x01, // len? lower values= no response, larger values = 1 frame then kicked
+    0x14, // len
+    0xd1, // ?
+    0x00, // chan
+    pkt_id >> 8,
+    pkt_id,
     0x11,
     0x0a,
     0x10,
@@ -60,7 +63,7 @@ export const SendUsrAck = (challenge: number[]): DataView => {
   buf.writeByteArray(bytes);
   return buf;
 };
-export const SendUsrChk = (username: string, password: string): DataView => {
+export const SendUsrChk = (username: string, password: string, pkt_id: number): DataView => {
   // type is char account[0x20]; char password[0x80];
   let buf = new Uint8Array(0x20 + 0x80);
   buf.fill(0);
@@ -81,7 +84,7 @@ export const SendUsrChk = (username: string, password: string): DataView => {
   // need to encapsulate this into create_Drw(outbuf, 0xd1, param4?, svar1?,
   // copy_len, inbuf); seems like param4/svar1 are overflowing == maybe '0xa'
   // and '0x2010'??
-  let retret = DrwHdr(0xf1d0, 8 + 12 + len - 4, 0xd1, 0);
+  let retret = DrwHdr(0xf1d0, 8 + 12 + len - 4, 0xd1, 0, pkt_id);
   retret.add(8).writeByteArray(new Uint8Array(ret.buffer));
   return retret;
 };

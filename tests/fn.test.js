@@ -3,9 +3,10 @@ import "../shim.ts";
 import assert from "assert";
 
 import { XqBytesDec, XqBytesEnc } from "../func_replacements.js";
+import { createResponseForControlCommand } from "../handlers.js";
+import { hexdump } from "../hexdump.js";
 import { SendUsrChk } from "../impl.ts";
 import { placeholderTypes, sprintf } from "../utils.js";
-import { hexdump } from "../hexdump.js";
 
 describe("debug_tools", () => {
   it("parses printed data", () => {
@@ -121,5 +122,16 @@ describe("make packet", () => {
       "f1d000b0d1000000110a2010a400ff00000000006f01010101010101010101010101010101010101010101010101010160656c686f01010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010160656c68";
     const expected = hstrToBA(expected_str);
     assert.deepEqual(SendUsrChk("admin", "admin").buffer, expected);
+  });
+  it("builds a good SendStartVideo", () => {
+    const input_pkt_str = "f1d00018d1000000110a20110c00ff000000000064504737fe010101";
+    // token-in = 0x64 0x50 0x47 0x37
+    const _expected_str = "f1d00114d1000000110a1030080100006551463601010101";
+    // output is 0x3010; 'start video'; hardcoded but shouldnt
+    const expected = hstrToBA(_expected_str);
+
+    const sess = { outgoingCommandId: 0 };
+    const got = createResponseForControlCommand(sess, new DataView(hstrToBA(input_pkt_str)));
+    assert.deepEqual(got.buffer, expected);
   });
 });
