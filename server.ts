@@ -6,7 +6,15 @@ import { handle_P2PAlive, handle_PunchPkt, handle_P2PRdy, handle_Drw, notImpl, n
 import { hexdump } from "./hexdump.js";
 import EventEmitter from "node:events";
 
-export type sock = {};
+export type Session = {
+  send: (msg: DataView) => void;
+  broadcast: (msg: DataView) => void;
+  outgoingCommandId: number;
+  ticket: number[];
+  frameEmitter: EventEmitter;
+};
+
+export type PacketHandler = (session: Session, dv: DataView) => void;
 
 type opt = {
   debug: boolean;
@@ -61,15 +69,6 @@ const makeSession = (cb: msgCb, connCb: connCb, options?: opt): Session => {
   return session;
 };
 
-export type Session = {
-  send: (msg: DataView) => void;
-  broadcast: (msg: DataView) => void;
-  outgoingCommandId: number;
-  ticket: number[];
-  frameEmitter: EventEmitter;
-};
-
-export type PacketHandler = (session: Session, dv: DataView) => void;
 const Handlers: Record<keyof typeof Commands, PacketHandler> = {
   PunchPkt: handle_PunchPkt,
 
