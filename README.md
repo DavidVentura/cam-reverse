@@ -26,6 +26,22 @@ There's no live-stream server built into this project yet.
 
 The protocol is weirdly complex, though very little communication is necessary to use the device
 
+The base structure of a packet is:
+![](diagrams/packet.svg)
+
+The payload is command-dependent; most commands have only a literal payload, but the `Drw` command has a framing scheme
+
+`Drw` uses the second byte in the payload to discriminate into two types of subcommands:
+
+Control packets:
+![](diagrams/control_packet.svg)
+
+The payload on control packets is "encrypted" when the length is > 5.
+
+Data packets:
+![](diagrams/data_packet.svg)
+
+Data packets further discriminate based on the first 4 bytes into: Audio Data (0x55aa15a8), Video data.
 
 To establish a session, a few _control packets_ are sent.
 ```mermaid
