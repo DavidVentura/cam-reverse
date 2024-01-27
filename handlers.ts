@@ -1,6 +1,7 @@
 import { Commands, CommandsByValue, ControlCommands } from "./datatypes.js";
 import { create_P2pRdy, SendStartVideo, SendUsrChk } from "./impl.js";
 import { Session } from "./server.js";
+import { u16_swap } from "./utils.js";
 
 let curImage = null;
 
@@ -66,12 +67,17 @@ const deal_with_data = (session: Session, dv: DataView) => {
   }
 
   if (audio) {
-    // TODO audio pkt
+    // "stream_head_t->type == 0x06" per pdf
+    if (dv.add(12).readU8() == 0x06) {
+      const audio_len = u16_swap(dv.add(8 + 16).readU16());
+      const audio_buf = dv.add(32 + 8).readByteArray(audio_len).buffer; // 8 for pkt header, 32 for `stream_head_t`
+      session.eventEmitter.emit("audio", Buffer.from(audio_buf));
+    }
   } else {
     const data = dv.add(8).readByteArray(pkt_len - 4);
     if (is_new_image) {
       if (curImage != null) {
-        session.frameEmitter.emit("frame", curImage);
+        session.eventEmitter.emit("frame", curImage);
       }
       curImage = Buffer.from(data.buffer);
     } else {

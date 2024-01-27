@@ -11,7 +11,7 @@ export type Session = {
   broadcast: (msg: DataView) => void;
   outgoingCommandId: number;
   ticket: number[];
-  frameEmitter: EventEmitter;
+  eventEmitter: EventEmitter;
 };
 
 export type PacketHandler = (session: Session, dv: DataView) => void;
@@ -50,7 +50,7 @@ const makeSession = (cb: msgCb, connCb: connCb, options?: opt): Session => {
   const session: Session = {
     outgoingCommandId: 0,
     ticket: [0, 0, 0, 0],
-    frameEmitter: new EventEmitter(),
+    eventEmitter: new EventEmitter(),
     send: (msg: DataView) => {
       const raw = msg.readU16();
       const cmd = CommandsByValue[raw];
@@ -117,11 +117,16 @@ const s = makeSession(
 );
 
 let cur_image_index = 0;
-s.frameEmitter.on("frame", (frame: Buffer) => {
+const audioFd = createWriteStream(`captures/audio.pcm`);
+s.eventEmitter.on("frame", (frame: Buffer) => {
   const fname = `captures/${cur_image_index.toString().padStart(4, "0")}.jpg`;
   let cur_image = createWriteStream(fname);
   cur_image_index++;
   cur_image.write(frame);
   cur_image.close();
   console.log("got an entire frame", frame.length);
+});
+
+s.eventEmitter.on("audio", (frame: Buffer) => {
+  audioFd.write(frame);
 });

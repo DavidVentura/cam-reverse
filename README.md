@@ -18,7 +18,7 @@ The hooks used with frida are at `frida-hooks.js`, but it's mostly a playground 
 There's also a pretty crappy Wireshark dissector at `dissector.lua`. You can install it with `make install-wireshark-dissector`.
 
 ## Running
-To execute the server, run `make run`; JPEG files will be created in a folder named `captures`.
+To execute the server, run `make run`; JPEG files and `audio.pcm` will be created in a folder named `captures`.
 
 There's no live-stream server built into this project yet.
 
@@ -73,7 +73,7 @@ To start a stream, a single _control packet_ is sent.
 
 The received stream is broken up into 1028 byte payloads, along with a sequence number.
 
-Stitching the payloads together yields JPEG frames for video, and (TBD) for audio.
+Stitching the payloads together yields JPEG frames for video, and 8KHz A-law PCM for audio.
 
 ```mermaid
 ---
