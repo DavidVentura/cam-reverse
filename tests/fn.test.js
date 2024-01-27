@@ -130,8 +130,9 @@ describe("make packet", () => {
     // output is 0x3010; 'start video'; hardcoded but shouldnt
     const expected = hstrToBA(_expected_str);
 
-    const sess = { outgoingCommandId: 0 };
+    const sess = { outgoingCommandId: 0, ticket: [0, 0, 0, 0] };
     const got = createResponseForControlCommand(sess, new DataView(hstrToBA(input_pkt_str)));
     assert.deepEqual(got.buffer, expected);
+    assert.deepEqual(sess.ticket, [0x65, 0x51, 0x46, 0x36]);
   });
 });

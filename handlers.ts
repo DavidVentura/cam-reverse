@@ -1,7 +1,8 @@
-import { Session } from "./server.js";
-import { ControlCommands, Commands, CommandsByValue } from "./datatypes.js";
 import { createWriteStream } from "node:fs";
-import { SendStartVideo, SendUsrChk, create_P2pRdy } from "./impl.js";
+
+import { Commands, CommandsByValue, ControlCommands } from "./datatypes.js";
+import { create_P2pRdy, SendStartVideo, SendUsrChk } from "./impl.js";
+import { Session } from "./server.js";
 
 let image_fds = [];
 let cur_image_index = 0;
@@ -36,7 +37,6 @@ export const handle_PunchPkt = (session: Session, dv: DataView) => {
 };
 
 export const createResponseForControlCommand = (session: Session, dv: DataView): DataView | null => {
-  const pkt_id = dv.add(6).readU16();
   const start_type = dv.add(8).readU16(); // 0xa11 on control; data starts here on DATA pkt
   const cmd_id = dv.add(10).readU16(); // 0x1120
 
@@ -46,20 +46,12 @@ export const createResponseForControlCommand = (session: Session, dv: DataView):
   }
 
   if (cmd_id == ControlCommands.ConnectUserAck) {
-    /*
-      00000000  f1 d0 00 18 d1 00 00 00 11 0a 20 11 0c 00 ff 00  .......... .....
-      00000010  00 00 00 00 34 54 63 4d fe 01 01 01              ....4TcM....
-                            ^^^^^^^^^^^
-                            some kind of challenge
-                            need to send the 0x3010
-                            command with these 4 bytes 'encrypted'
-      */
-    let challenge = [0, 0, 0, 0];
-    challenge[0] = dv.add(0x14).readU8();
-    challenge[1] = dv.add(0x15).readU8();
-    challenge[2] = dv.add(0x16).readU8();
-    challenge[3] = dv.add(0x17).readU8();
-    const buf = SendStartVideo(session.outgoingCommandId, challenge);
+    let c = new Uint8Array(dv.add(0x14).readByteArray(4).buffer);
+    session.ticket[0] = c[0] % 2 == 0 ? c[0] + 1 : c[0] - 1;
+    session.ticket[1] = c[1] % 2 == 0 ? c[1] + 1 : c[1] - 1;
+    session.ticket[2] = c[2] % 2 == 0 ? c[2] + 1 : c[2] - 1;
+    session.ticket[3] = c[3] % 2 == 0 ? c[3] + 1 : c[3] - 1;
+    const buf = SendStartVideo(session);
     return buf;
   }
 };

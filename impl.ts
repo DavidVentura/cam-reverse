@@ -1,6 +1,7 @@
 import "./shim.ts";
 
 import { Commands } from "./datatypes.js";
+import { Session } from "./server.js";
 import { XqBytesEnc } from "./func_replacements.js";
 import { hexdump } from "./hexdump.js";
 import { u16_swap } from "./utils.js";
@@ -29,7 +30,7 @@ const DrwHdr = (cmd: number, len: number, d1_or_d2: 0xd1 | 0xd2, m_chan: number,
   return retret;
 };
 
-export const SendStartVideo = (pkt_id: number, challenge: number[]): DataView => {
+export const SendStartVideo = (session: Session): DataView => {
   // TODO: extract SendUsrChk
   let buf = new DataView(new Uint8Array(0x18).buffer);
   // console.log(hexdump(DrwHdr(0xf1d0, 0x0114, 0xd1, 0, pkt_id).buffer));
@@ -41,8 +42,8 @@ export const SendStartVideo = (pkt_id: number, challenge: number[]): DataView =>
     0x14, // len
     0xd1, // ?
     0x00, // chan
-    pkt_id >> 8,
-    pkt_id,
+    session.outgoingCommandId >> 8,
+    session.outgoingCommandId,
     0x11,
     0x0a,
     0x10,
@@ -51,10 +52,10 @@ export const SendStartVideo = (pkt_id: number, challenge: number[]): DataView =>
     0x01,
     0x00,
     0x00,
-    challenge[0] % 2 == 0 ? challenge[0] + 1 : challenge[0] - 1,
-    challenge[1] % 2 == 0 ? challenge[1] + 1 : challenge[1] - 1,
-    challenge[2] % 2 == 0 ? challenge[2] + 1 : challenge[2] - 1,
-    challenge[3] % 2 == 0 ? challenge[3] + 1 : challenge[3] - 1,
+    session.ticket[0],
+    session.ticket[1],
+    session.ticket[2],
+    session.ticket[3],
     0x01,
     0x01,
     0x01,
