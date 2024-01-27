@@ -1,4 +1,4 @@
-Re-implementation of the "ilnk" protocol used on some cheap chinese cameras (sometimes branded as 'A9').
+Re-implementation of the "ilnk" protocol used on some cheap (\<$5) IP cameras (sometimes branded as 'X5' or 'A9').
 
 * Bought [here](https://www.aliexpress.com/item/1005006287788979.html).
   * Waiting for [this A9 camera](https://www.aliexpress.com/item/1005006117593880.html) to validate support.
