@@ -130,3 +130,7 @@ s.eventEmitter.on("frame", (frame: Buffer) => {
 s.eventEmitter.on("audio", (frame: Buffer) => {
   audioFd.write(frame);
 });
+
+s.eventEmitter.on("connect", (name: string) => {
+  console.log(`Connected to ${name}`);
+});

@@ -2,6 +2,7 @@ import { Commands, CommandsByValue, ControlCommands } from "./datatypes.js";
 import { create_P2pRdy, SendStartVideo, SendUsrChk } from "./impl.js";
 import { Session } from "./server.js";
 import { u16_swap } from "./utils.js";
+import { hexdump } from "./hexdump.js";
 
 let curImage = null;
 
@@ -30,6 +31,7 @@ export const handle_PunchPkt = (session: Session, dv: DataView) => {
   const serial = dv.add(8).readU64().toString();
   const suffix = dv.add(16).readString(4);
   // f141 20 BATC 609531 EXLV
+  session.eventEmitter.emit("connect", prefix.toString() + serial + suffix.toString());
   session.send(create_P2pRdy(dv.add(4).readByteArray(len)));
 };
 
@@ -72,6 +74,8 @@ const deal_with_data = (session: Session, dv: DataView) => {
       const audio_len = u16_swap(dv.add(8 + 16).readU16());
       const audio_buf = dv.add(32 + 8).readByteArray(audio_len).buffer; // 8 for pkt header, 32 for `stream_head_t`
       session.eventEmitter.emit("audio", Buffer.from(audio_buf));
+    } else {
+      // not sure what these are for, there's one per frame. maybe alignment?
     }
   } else {
     const data = dv.add(8).readByteArray(pkt_len - 4);
