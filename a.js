@@ -1,9 +1,6 @@
 import fs from "node:fs";
 import beamcoder from "beamcoder";
 
-//let outFile = fs.createWriteStream("a.h264");
-let endcode = Buffer.from([0, 0, 1, 0xb7]);
-
 async function imageToVideo(imagePath, duration, frameRate = 30) {
   // Create a demuxer for the JPEG image
   let demuxer = await beamcoder.demuxer(imagePath);
@@ -26,7 +23,8 @@ async function imageToVideo(imagePath, duration, frameRate = 30) {
     name: "libx264",
     width: frame.width,
     height: frame.height,
-    bit_rate: 500000,
+    bit_rate: 400000,
+    //qmin: 22,
     time_base: [1, frameRate],
     framerate: [frameRate, 1],
     pix_fmt: "yuv420p",
@@ -38,22 +36,25 @@ async function imageToVideo(imagePath, duration, frameRate = 30) {
   let stream = beamcoder.muxerStream({});
   stream.pipe(fs.createWriteStream("test.mp4"));
   //  Create a muxer for the output video
-  let muxer = stream.muxer({ format_name: "mpegts" }); //"mp4" });
+  let muxer = stream.muxer({ format_name: "mp4" });
 
   //console.log(demuxer.streams[0].codecpar.extradata); // null
   let vstr = muxer.newStream({
-    name: "ts", //"h264",
+    name: "h264",
     time_base: [1, 90000], //frameRate],
     interleaved: true,
-    codecpar: {
-      width: encoder.width,
-      height: encoder.height,
-      format: encoder.pix_fmt,
-      //extradata: demuxer.streams[0].codecpar.extradata,
-    },
   });
-  //await muxer.openIO();
-  //await muxer.initOutput({ movflags: "frag_keyframe+empty_moov+default_base_moof" });
+
+  // the Object.assign is structural (!!)
+  Object.assign(vstr.codecpar, {
+    width: encoder.width,
+    height: encoder.height,
+    format: encoder.pix_fmt,
+  });
+
+  await muxer.openIO();
+  // adding "empty_moov" crashes mpv/ffmpeg
+  await muxer.initOutput({ movflags: "frag_keyframe+default_base_moof+faststart" });
   console.log("inited");
   // Add a video stream to the muxer
   await muxer.writeHeader();
@@ -72,8 +73,8 @@ async function imageToVideo(imagePath, duration, frameRate = 30) {
     for (let packet of encodedPackets.packets) {
       packet.duration = 1;
       packet.stream_index = vstr.index;
-      packet.pts = (packet.pts * 90000) / frameRate;
-      packet.dts = (packet.dts * 90000) / frameRate;
+      packet.pts = (packet.pts * 90000) / (frameRate * 1);
+      packet.dts = (packet.dts * 90000) / (frameRate * 1);
       //packet.pts = i;
       await muxer.writeFrame(packet);
       // outFile.write(packet.data);
@@ -88,11 +89,10 @@ async function imageToVideo(imagePath, duration, frameRate = 30) {
   for (let packet of encodedPackets.packets) {
     packet.duration = 1;
     packet.stream_index = vstr.index;
-    packet.pts = (packet.pts * 90000) / frameRate;
-    packet.dts = (packet.dts * 90000) / frameRate;
+    packet.pts = (packet.pts * 90000) / (frameRate * 1);
+    packet.dts = (packet.dts * 90000) / (frameRate * 1);
     await muxer.writeFrame(packet);
   }
-  //outFile.end(endcode);
   await muxer.writeTrailer();
 }
 
