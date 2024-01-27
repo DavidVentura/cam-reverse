@@ -27,11 +27,12 @@ There's no live-stream server built into this project yet.
 The protocol is weirdly complex, though very little communication is necessary to use the device
 
 The base structure of a packet is:
+
 ![](diagrams/packet.svg)
 
-The payload is command-dependent; most commands have only a literal payload, but the `Drw` command has a framing scheme
+The payload is command-dependent; most commands have only a literal payload, but the `Drw` (`0xf1d0`) command has a framing scheme:
 
-`Drw` uses the second byte in the payload to discriminate into two types of subcommands:
+By using the second byte in the payload as a discriminant, we can split the payload into two types of subcommands:
 
 Control packets:
 ![](diagrams/control_packet.svg)
@@ -43,6 +44,8 @@ Data packets:
 
 Data packets further discriminate based on the first 4 bytes into: Audio Data (0x55aa15a8), Video data.
 
+### Session
+
 To establish a session, a few _control packets_ are sent.
 ```mermaid
 ---
@@ -51,16 +54,16 @@ title: Establish session
 
 sequenceDiagram
 	autonumber
-    App->>+Cam: LanSearch
-    Cam->>-App: PunchPkt (SerialNo)
-    App->>+Cam: P2PRdy
-    Cam->>-App: P2PRdy
-    App->>+Cam: ConnectUser
-    Cam->>-App: ConnectUserAck (Video Token)
+    App->>+Cam: [C] LanSearch
+    Cam->>-App: [C] PunchPkt (SerialNo)
+    App->>+Cam: [C] P2PRdy
+    Cam->>-App: [C] P2PRdy
+    App->>+Cam: [C] ConnectUser
+    Cam->>-App: [C] ConnectUserAck (Video Token)
    
    loop Every 400-500ms
-        Cam-->>+App: P2PAlive
-        App-->>-Cam: P2PAliveAck
+        Cam-->>+App: [C] P2PAlive
+        App-->>-Cam: [C] P2PAliveAck
     end
 ```
 
@@ -76,11 +79,11 @@ title: Stream audio/video
 ---
 
 sequenceDiagram
-    App->>Cam: StreamStart (with Token)
+    App->>Cam: [C] StreamStart (with Token)
    
    loop
-        Cam-->>+App: Audio/Video Payload
-        App-->>-Cam: DrwAck
+        Cam-->>+App: [D] Audio/Video Payload
+        App-->>-Cam: [C] DrwAck
     end
 ```
 
