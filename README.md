@@ -35,11 +35,13 @@ The payload is command-dependent; most commands have only a literal payload, but
 By using the second byte in the payload as a discriminant, we can split the payload into two types of subcommands:
 
 Control packets:
+
 ![](diagrams/control_packet.svg)
 
 The payload on control packets is "encrypted" when the length is > 5.
 
 Data packets:
+
 ![](diagrams/data_packet.svg)
 
 Data packets further discriminate based on the first 4 bytes into: Audio Data (0x55aa15a8), Video data.
