@@ -34,13 +34,13 @@ The payload is command-dependent; most commands have only a literal payload, but
 
 By using the second byte in the payload as a discriminant, we can split the payload into two types of subcommands:
 
-Control packets:
+**Control packets**:
 
 ![](diagrams/control_packet.svg)
 
 The payload on control packets is "encrypted" when the length is > 5.
 
-Data packets:
+**Data packets**:
 
 ![](diagrams/data_packet.svg)
 
