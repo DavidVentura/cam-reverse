@@ -273,3 +273,11 @@ AvcLIB = src/object_jni.cpp, line 653, SystemCmd:[p2pID=BATC609531EXLVS]SystemCm
 AvcLIB = src/object_jni.cpp, line 653, SystemCmd:[p2pID=BATC609531EXLVS]SystemCmd=0x1040
 SystemCmd 0x1008 ret: 12
 SystemCmd 0x1040 ret: 92
+
+
+
+
+
+battery max = 3650 while transmitting
+battery min = 3200 (powered off)
+bat 3480 -> 3200 while transmitting via wifi = 106 seconds
