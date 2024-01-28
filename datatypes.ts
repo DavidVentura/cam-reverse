@@ -24,12 +24,17 @@ export const Commands = {
 };
 
 // Record<keyof typeof Commands,
-export const CommandsByValue = Object.keys(Commands).reduce((acc, cur) => {
-  acc[Commands[cur]] = cur;
+type t = Record<number, keyof typeof Commands>;
+export const CommandsByValue: t = Object.keys(Commands).reduce((acc: t, cur) => {
+  let key: keyof typeof Commands = cur as keyof typeof Commands;
+  acc[Commands[key]] = key;
   return acc;
 }, {});
 
+export const DrwStart = 0x0a11;
 export const ControlCommands = {
   ConnectUser: 0x2010,
   ConnectUserAck: 0x2011,
+  DevStatus: 0x0810,
+  DevStatusAck: 0x0811,
 };
