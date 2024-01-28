@@ -1,8 +1,9 @@
 import { Commands, CommandsByValue, ControlCommands } from "./datatypes.js";
-import { create_P2pRdy, SendStartVideo, SendUsrChk } from "./impl.js";
+import { create_P2pRdy, SendStartVideo, SendDevStatus, SendUsrChk } from "./impl.js";
 import { Session } from "./server.js";
-import { u16_swap } from "./utils.js";
+import { u16_swap, u32_swap } from "./utils.js";
 import { hexdump } from "./hexdump.js";
+import { XqBytesDec } from "./func_replacements.js";
 
 let curImage = null;
 
@@ -29,8 +30,8 @@ export const handle_PunchPkt = (session: Session, dv: DataView) => {
   const len = dv.add(2).readU16();
   const prefix = dv.add(4).readString(4);
   const serial = dv.add(8).readU64().toString();
-  const suffix = dv.add(16).readString(4);
-  // f141 20 BATC 609531 EXLV
+  const suffix = dv.add(16).readString(len - 16 + 4); // 16 = offset, +4 header
+  // f141 20 BATC 609531 EXLVS
   session.eventEmitter.emit("connect", prefix.toString() + serial + suffix.toString());
   session.send(create_P2pRdy(dv.add(4).readByteArray(len)));
 };
@@ -38,21 +39,59 @@ export const handle_PunchPkt = (session: Session, dv: DataView) => {
 export const createResponseForControlCommand = (session: Session, dv: DataView): DataView | null => {
   const start_type = dv.add(8).readU16(); // 0xa11 on control; data starts here on DATA pkt
   const cmd_id = dv.add(10).readU16(); // 0x1120
+  const payload_len = u16_swap(dv.add(0xc).readU16());
 
   if (start_type != 0x110a) {
     console.error(`Expected start_type to be 0xa11, got 0x${start_type.toString(16)}`);
     return;
   }
+  const rotate_chr = 4;
+  if (payload_len > rotate_chr) {
+    // 20 = 16 (header) + 4 (??)
+    XqBytesDec(dv.add(20), payload_len - 4, rotate_chr);
+    // console.log(hexdump(dv));
+  }
 
   if (cmd_id == ControlCommands.ConnectUserAck) {
-    let c = new Uint8Array(dv.add(0x14).readByteArray(4).buffer);
-    session.ticket[0] = c[0] % 2 == 0 ? c[0] + 1 : c[0] - 1;
-    session.ticket[1] = c[1] % 2 == 0 ? c[1] + 1 : c[1] - 1;
-    session.ticket[2] = c[2] % 2 == 0 ? c[2] + 1 : c[2] - 1;
-    session.ticket[3] = c[3] % 2 == 0 ? c[3] + 1 : c[3] - 1;
+    let c = new Uint8Array(dv.add(0x18).readByteArray(4).buffer);
+    session.ticket = [...c];
     const buf = SendStartVideo(session);
     return buf;
   }
+
+  if (cmd_id == ControlCommands.DevStatusAck) {
+    let charging = u32_swap(dv.add(0x28).readU32()) & 1; // 0x14000101 v 0x14000100
+    let power = u16_swap(dv.add(0x18).readU16()); // '3730' or '3765', milliVolts?
+    let dbm = dv.add(0x24).readU8() - 0x100; // 0xbf - 0x100 = -65dbm .. constant??
+    // > -50 = excellent, -50 to -60 good, -60 to -70 fair, <-70 weak
+
+    console.log(`charging? ${charging}, batlevel? ${power}, wifi dbm: ${dbm}`);
+  }
+  // 0x6102 = parseWifisetting
+  /*
+   *   01-28 18:19:55.558 12566  3872 F LogUtils: cmdParser,setting:WifiSettingBean{ssid='FTYC477259EDEDE', psk='12345678', ip='0.255.255.255', mask='0.0.0.0', gw='0.0.0.0', dns1='0.0.0.0', dns2='0.0.0.0', enable=0, wifiStatus=0  , mode=2, channel=0, authtype=0, dhcp=0}  [ file:IpcByte2ObjectParser.java, line:1361, method:ParseWifiSetting, class:com.ilnk.callback.IpcByte2ObjectParser ]
+  decrypted data
+             0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F  0123456789ABCDEF
+  00000000  f1 d0 01 18 d1 00 00 c9 11 0a 02 61 0c 01 00 00  ...........a....
+  00000010  00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00  ................
+  00000020  00 00 00 00 00 00 00 00 00 00 00 00 46 54 59 43  ............FTYC
+  00000030  34 37 37 32 35 39 45 44 45 44 45 00 00 00 00 00  477259EDEDE.....
+  00000040  00 00 00 00 00 00 00 00 00 00 00 00 31 32 33 34  ............1234
+  00000050  35 36 37 38 00 00 00 00 00 00 00 00 00 00 00 00  5678............
+  00000060  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  ................
+  00000070  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  ................
+  00000080  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  ................
+  00000090  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  ................
+  000000a0  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  ................
+  000000b0  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  ................
+  000000c0  00 00 00 00 00 00 00 00 00 00 00 00 30 2e 32 35  ............0.25
+  000000d0  35 2e 32 35 35 2e 32 35 35 00 00 00 30 2e 30 2e  5.255.255...0.0.
+  000000e0  30 2e 30 00 00 00 00 00 00 00 00 00 30 2e 30 2e  0.0.........0.0.
+  000000f0  30 2e 30 00 00 00 00 00 00 00 00 00 30 2e 30 2e  0.0.........0.0.
+  00000100  30 2e 30 00 00 00 00 00 00 00 00 00 30 2e 30 2e  0.0.........0.0.
+  00000110  30 2e 30 00 00 00 00 00 01 01 01 01              0.0.........
+
+  */
 };
 
 const deal_with_data = (session: Session, dv: DataView) => {
