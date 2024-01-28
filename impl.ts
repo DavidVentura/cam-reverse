@@ -29,6 +29,38 @@ const DrwHdr = (cmd: number, len: number, d1_or_d2: 0xd1 | 0xd2, m_chan: number,
   retret.add(6).writeU16(pkt_id);
   return retret;
 };
+export const SendDevStatus = (session: Session): DataView => {
+  let buf = new DataView(new Uint8Array(0x14).buffer);
+
+  /*
+00000000  f1 d0 00 10 d1 00 00 c3 11 0a 08 10 04 00 00 00  ................
+00000010  68 66 6b 67                                      hfkg
+*/
+  let bytes = [
+    0xf1,
+    0xd0,
+    0x00, // len? lower values= no response, larger values = 1 frame then kicked
+    0x10, // len
+    0xd1, // ?
+    0x00, // chan
+    session.outgoingCommandId >> 8,
+    session.outgoingCommandId,
+    0x11,
+    0x0a,
+    0x08,
+    0x10,
+    0x04, // len
+    0x00, // len
+    0x00, // dst
+    0x00, // dst
+    session.ticket[0],
+    session.ticket[1],
+    session.ticket[2],
+    session.ticket[3],
+  ];
+  buf.writeByteArray(bytes);
+  return buf;
+};
 
 export const SendStartVideo = (session: Session): DataView => {
   // TODO: extract SendUsrChk
@@ -74,7 +106,7 @@ export const SendUsrChk = (username: string, password: string, pkt_id: number): 
 
   const start = 0xa11;
   const dest = 0xff;
-  const cmd = 0x1020;
+  const cmd = 0x1020; // FIXME ControlCommands.ConnectUser
   const len = buf.byteLength;
   let cmdHeader = CmdSndProcHdr(start, cmd, len, dest);
   let ret = new DataView(new Uint8Array(12 + len).buffer);
