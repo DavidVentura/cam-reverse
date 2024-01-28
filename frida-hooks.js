@@ -1,4 +1,5 @@
-import { replaceFunctions, Commands, CommandsByValue } from "./func_replacements.js";
+import { Commands, CommandsByValue } from "./datatypes.js";
+import { replaceFunctions, XqBytesDec } from "./func_replacements.js";
 import { placeholderTypes, sprintf, u16_swap } from "./utils.js";
 
 const hook_fn = (name_in_elf, enter, leave) => {
@@ -63,7 +64,7 @@ const hook___android_log_print = () => {
 
       const values = types.map((t, idx) => o[t](args[idx + 3]));
       const newStr = sprintf(fmt, values);
-      console.log(_tag, newStr);
+      console.log(_tag, newStr.trim());
     },
     () => {},
   );
@@ -92,10 +93,18 @@ const hook_udpsend = () => {
     (retval) => {
       const data = o.buf.readByteArray(retval.toInt32());
       const cmd = u16_swap(o.buf.readU16());
+      const len = u16_swap(o.buf.add(2).readU16());
       const name = CommandsByValue[cmd];
-      console.log(`UDP PKT RECV, cmd=${name}, 0x${cmd.toString(16)}, ret=${retval}`);
+      console.log(`UDP PKT RECV, len=${len}, cmd=${name}, 0x${cmd.toString(16)}, ret=${retval}`);
       console.log(data);
       if (cmd == Commands.Drw) {
+        if (len > 0x18) {
+          // pos(0xa11) == 8 + 0xc == 0x14 == 20
+          const under = data.unwrap().add(0x14); //, len - 0x20;
+          XqBytesDec(under, len - 0x14, 4);
+          console.log("decrypted data");
+          console.log(data);
+        }
       }
     },
   );
