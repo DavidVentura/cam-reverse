@@ -1,5 +1,5 @@
 DataView.prototype.add = function (offset) {
-  return new DataView(this.buffer, offset);
+  return new DataView(this.buffer, offset + this.byteOffset);
 };
 DataView.prototype.writeU8 = function (val) {
   return this.setUint8(0, val);

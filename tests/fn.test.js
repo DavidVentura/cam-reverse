@@ -106,6 +106,13 @@ describe("module", () => {
     XqBytesEnc(in_buf, long_dec_bytes.byteLength, 4); // this mutates in_buf
     assert.deepEqual(new Uint8Array(in_buf.buffer), long_enc_bytes);
   });
+  /* TODO
+  it("decrypts offset dataviews", () => {
+    const in_buf = new DataView(simple_enc_bytes.buffer.slice(0));
+    XqBytesDec(in_buf, simple_enc_bytes.byteLength, 4); // this mutates in_buf
+    assert.deepEqual(new Uint8Array(in_buf.buffer), simple_dec_bytes);
+  });
+  */
   it("reverts Enc with Dec", () => {
     const in_buf = new DataView(long_dec_bytes.buffer.slice(0));
     XqBytesEnc(in_buf, long_dec_bytes.byteLength, 4); // this mutates in_buf
