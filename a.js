@@ -1,9 +1,20 @@
 import fs from "node:fs";
 import beamcoder from "beamcoder";
+import EventEmitter from "node:events";
 
+const ee = new EventEmitter();
+
+let demuxers = beamcoder.demuxers();
+//console.log(demuxers);
+
+ee.on("inputFrame", (f) => {});
 async function imageToVideo(imagePath, duration, frameRate = 30) {
+  const muxTimeBase = 90000;
+  let demuxerStream = beamcoder.demuxerStream({ highwaterMark: 65536 });
+  fs.createReadStream(imagePath).pipe(demuxerStream);
   // Create a demuxer for the JPEG image
-  let demuxer = await beamcoder.demuxer(imagePath);
+  // let demuxer = await beamcoder.demuxer(imagePath);
+  let demuxer = await demuxerStream.demuxer({ name: "jpeg_pipe" });
 
   // Read the image packet
   let packet = await demuxer.read();
@@ -19,6 +30,9 @@ async function imageToVideo(imagePath, duration, frameRate = 30) {
   //console.log("frame", frame.width, frame.height);
 
   // Create an H.264 encoder
+  // https://stackoverflow.com/a/13646293/3530257
+  // > the codec unit of measurement is commonly set to the interval between each frame and the next,
+  // > so that frame times are successive integers.
   let encoder = beamcoder.encoder({
     name: "libx264",
     width: frame.width,
@@ -41,7 +55,7 @@ async function imageToVideo(imagePath, duration, frameRate = 30) {
   //console.log(demuxer.streams[0].codecpar.extradata); // null
   let vstr = muxer.newStream({
     name: "h264",
-    time_base: [1, 90000], //frameRate],
+    time_base: [1, muxTimeBase], //frameRate],
     interleaved: true,
   });
 
@@ -54,7 +68,8 @@ async function imageToVideo(imagePath, duration, frameRate = 30) {
 
   await muxer.openIO();
   // adding "empty_moov" crashes mpv/ffmpeg
-  await muxer.initOutput({ movflags: "frag_keyframe+default_base_moof+faststart" });
+  //await muxer.initOutput({ movflags: "frag_keyframe+default_base_moof+faststart" });
+  await muxer.initOutput({ movflags: "frag_keyframe" });
   console.log("inited");
   // Add a video stream to the muxer
   await muxer.writeHeader();
@@ -64,8 +79,8 @@ async function imageToVideo(imagePath, duration, frameRate = 30) {
 
   console.log("making frames", totalFrames);
   for (let i = 0; i < totalFrames; i++) {
-    // Encode the frame
-    frame.pts = i;
+    frame.pts = i; // << the successive integers
+    frame.dts = i; // << the successive integers
     let encodedPackets = await encoder.encode(frame);
     // console.log(encodedPackets);
 
@@ -73,8 +88,8 @@ async function imageToVideo(imagePath, duration, frameRate = 30) {
     for (let packet of encodedPackets.packets) {
       packet.duration = 1;
       packet.stream_index = vstr.index;
-      packet.pts = (packet.pts * 90000) / (frameRate * 1);
-      packet.dts = (packet.dts * 90000) / (frameRate * 1);
+      packet.pts = (packet.pts * muxTimeBase) / frameRate;
+      packet.dts = (packet.dts * muxTimeBase) / frameRate;
       //packet.pts = i;
       await muxer.writeFrame(packet);
       // outFile.write(packet.data);
@@ -89,8 +104,8 @@ async function imageToVideo(imagePath, duration, frameRate = 30) {
   for (let packet of encodedPackets.packets) {
     packet.duration = 1;
     packet.stream_index = vstr.index;
-    packet.pts = (packet.pts * 90000) / (frameRate * 1);
-    packet.dts = (packet.dts * 90000) / (frameRate * 1);
+    packet.pts = (packet.pts * muxTimeBase) / frameRate;
+    packet.dts = (packet.dts * muxTimeBase) / frameRate;
     await muxer.writeFrame(packet);
   }
   await muxer.writeTrailer();
