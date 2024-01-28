@@ -133,4 +133,5 @@ s.eventEmitter.on("audio", (frame: Buffer) => {
 
 s.eventEmitter.on("connect", (name: string) => {
   console.log(`Connected to ${name}`);
+  s.outgoingCommandId = 0;
 });
