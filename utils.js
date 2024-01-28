@@ -24,6 +24,8 @@ export const sprintf = (str, values) => {
     .join("");
   return s + str.slice(lastScanned);
 };
+export const u32_swap = (x) =>
+  ((x & 0xff000000) >> 24) | ((x & 0xff0000) >> 8) | ((x & 0xff00) << 8) | ((x & 0xff) << 24);
 export const u16_swap = (x) => ((x & 0xff00) >> 8) | ((x & 0x00ff) << 8);
 export const swap_endianness_u16 = (ptr) => {
   const bytes = ptr.readU16();
