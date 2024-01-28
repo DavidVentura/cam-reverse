@@ -10,12 +10,15 @@ export const hexdump = (target, options) => {
   const ansiColor = options.hasOwnProperty("ansiColor") ? options.ansiColor : 0;
 
   let buffer;
+  if (target instanceof DataView) {
+    target = target.buffer;
+  }
   if (target instanceof ArrayBuffer) {
     if (length === undefined) length = target.byteLength;
     else length = Math.min(length, target.byteLength);
     buffer = target;
   } else {
-    throw "Gimme array buffer";
+    throw "Gimme array buffer or DataView";
   }
 
   const startAddress = 0;
