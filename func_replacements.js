@@ -1,5 +1,5 @@
-import { swap_endianness_u32, swap_endianness_u16, u16_swap } from "./utils.js";
 import { Commands, CommandsByValue } from "./datatypes.js";
+import { swap_endianness_u16, swap_endianness_u32, u16_swap } from "./utils.js";
 
 const writeCommand2 = (command, buf) => {
   buf.writeByteArray([(command & 0xff00) >> 8, command & 0xff]);
@@ -12,6 +12,7 @@ export const XqBytesDec = (inoutbuf, buflen, rotate) => {
   // only rotation is different
   let new_buf = new Uint8Array(buflen);
   new_buf.fill(0x1);
+
   for (let i = 0; i < buflen; i++) {
     let b = inoutbuf.add(i).readU8();
     if ((b & 1) != 0) {
@@ -207,15 +208,15 @@ const dbg_create_Drw = (og_func) => {
 const dbg__ZN12CPPPPChannel10CmdSndPushEiiPci = (og_func) => {
   const CmdSndPush = (_this, dest, cmdtype, idk, cmdlen) => {
     console.log("CmdSndPush", _this, dest.toString(16), cmdtype.toString(16), idk, cmdlen);
-    //CmdSndPush 0x1020 ret: 172
-    //CmdSndPush 0x1040 ret: 92
-    //CmdSndPush 0x50ff ret: 564
-    //CmdSndPush 0x1008 ret: 12
+    // CmdSndPush 0x1020 ret: 172
+    // CmdSndPush 0x1040 ret: 92
+    // CmdSndPush 0x50ff ret: 564
+    // CmdSndPush 0x1008 ret: 12
     //
-    //if (cmdtype == 0x1020) return 172; // mask
     if (cmdtype == 0x1040) return 92; // mask
+    if (cmdtype == 0x1020) return 172; // mask
     if (cmdtype == 0x50ff) return 564; // mask
-    if (cmdtype == 0x1008) return 12; // mask
+    // if (cmdtype == 0x1008) return 12; // battery
 
     let ret = og_func(_this, dest, cmdtype, idk, cmdlen);
     console.log(`CmdSndPush 0x${cmdtype.toString(16)} ret: ${ret}`);
@@ -226,7 +227,7 @@ const dbg__ZN12CPPPPChannel10CmdSndPushEiiPci = (og_func) => {
 
 const dbg__Z9SystemCmdP7_JNIEnvPciiP8_jobject = (og_func) => {
   // "pointer", "pointer", "uint32", "uint32", "pointer"
-  const AvCmd = (java_class, p2pid, sit, cmd, java_param) => {
+  const SystemCmd = (java_class, p2pid, sit, cmd, java_param) => {
     console.log("SystemCmd", java_class, p2pid.readCString(), sit, cmd.toString(16), java_param);
     if (cmd == 0x3018) return 20; // mask
     if (cmd == 0x3019) return 12; // mask
@@ -235,13 +236,13 @@ const dbg__Z9SystemCmdP7_JNIEnvPciiP8_jobject = (og_func) => {
     if (cmd == 0x3001) return 12;
     if (cmd == 0x3003) return 12;
 
-    //if (cmd == 0x3011) return 272; // this is STOP !!
-    //if (cmd == 0x3010) return 272; // borks
+    // if (cmd == 0x3011) return 272; // this is STOP !!
+    // if (cmd == 0x3010) return 272; // borks
     let ret = og_func(java_class, p2pid, sit, cmd, java_param);
     console.log(`SystemCmd 0x${cmd.toString(16)} ret: ${ret}`);
     return ret;
   };
-  return AvCmd;
+  return SystemCmd;
 };
 const dbg__Z5AvCmdP7_JNIEnvPciiP8_jobject = (og_func) => {
   // "pointer", "pointer", "uint32", "uint32", "pointer"
@@ -254,8 +255,8 @@ const dbg__Z5AvCmdP7_JNIEnvPciiP8_jobject = (og_func) => {
     if (cmd == 0x3001) return 12;
     if (cmd == 0x3003) return 12;
 
-    //if (cmd == 0x3011) return 272; // this is STOP !!
-    //if (cmd == 0x3010) return 272; // borks
+    // if (cmd == 0x3011) return 272; // this is STOP !!
+    // if (cmd == 0x3010) return 272; // borks
     let ret = og_func(java_class, p2pid, sit, cmd, java_param);
     console.log(`AvCmd 0x${cmd.toString(16)} ret: ${ret}`);
     return ret;
@@ -284,10 +285,10 @@ const dbg_pack_ClntPkt = (og_func) => {
       },
     };
     /*
-	  P2PAlive: 0xf1e0,
-	  P2PAliveAck: 0xf1e1,
-	  P2pRdy: 0xf142, // idk??
-	  */
+          P2PAlive: 0xf1e0,
+          P2PAliveAck: 0xf1e1,
+          P2pRdy: 0xf142, // idk??
+          */
 
     const fn = packFn[cmd];
     if (fn == undefined) {
