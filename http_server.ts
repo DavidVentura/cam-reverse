@@ -1,11 +1,11 @@
-import http from "node:http";
-
 import { RemoteInfo } from "node:dgram";
 import { createWriteStream } from "node:fs";
+import http from "node:http";
 
 import { CommandsByValue } from "./datatypes.js";
 import { create_LanSearch } from "./func_replacements.js";
 import { hexdump } from "./hexdump.js";
+import { create_P2pAlive } from "./impl.js";
 import { Handlers, makeSession } from "./server.js";
 
 const s = makeSession(
@@ -18,10 +18,11 @@ const s = makeSession(
       console.log(hexdump(msg.buffer, { ansi: options.ansi, ansiColor: 1 }));
     }
     Handlers[cmd](session, dv, rinfo);
+    session.lastReceivedPacket = Date.now();
   },
   (session) => {
-    // ther should be a better way of executing periodic status update requests
-    // per device
+    // ther should be a better way of executing periodic status update
+    // requests per device
     const int = setInterval(() => {
       let buf = new DataView(new Uint8Array(4).buffer);
       create_LanSearch(buf);
@@ -52,6 +53,13 @@ s.eventEmitter.on("connect", (name: string, rinfo: RemoteInfo) => {
   console.log(`Connected to ${name} - ${rinfo.address}`);
   s.outgoingCommandId = 0;
   s.dst_ip = rinfo.address;
+
+  const int = setInterval(() => {
+    let buf = create_P2pAlive();
+    if (Date.now() - s.lastReceivedPacket > 500) {
+      s.send(buf);
+    }
+  }, 1000);
 });
 
 const server = http.createServer((req, res) => {

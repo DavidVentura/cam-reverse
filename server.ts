@@ -12,6 +12,7 @@ export type Session = {
   ticket: number[];
   eventEmitter: EventEmitter;
   dst_ip: string;
+  lastReceivedPacket: number;
 };
 
 export type PacketHandler = (session: Session, dv: DataView, rinfo: RemoteInfo) => void;
@@ -49,6 +50,7 @@ export const makeSession = (cb: msgCb, connCb: connCb, options: opt): Session =>
   const session: Session = {
     outgoingCommandId: 0,
     ticket: [0, 0, 0, 0],
+    lastReceivedPacket: 0,
     eventEmitter: new EventEmitter(),
     send: (msg: DataView) => {
       const raw = msg.readU16();

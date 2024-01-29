@@ -92,3 +92,10 @@ export const create_P2pRdy = (inbuf: DataView): DataView => {
   outbuf.add(4).writeByteArray(new Uint8Array(inbuf.readByteArray(P2PRDY_SIZE).buffer));
   return outbuf;
 };
+
+export const create_P2pAlive = (): DataView => {
+  const outbuf = new DataView(new Uint8Array(4).buffer);
+  outbuf.writeU16(Commands.P2PAlive);
+  outbuf.add(2).writeU16(0);
+  return outbuf;
+};
