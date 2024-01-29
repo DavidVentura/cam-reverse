@@ -9,7 +9,7 @@ venv: requirements.txt
 	touch venv
 
 run: node_modules
-	./node_modules/.bin/ts-node --esm server.ts
+	./node_modules/.bin/ts-node --esm http_server.ts
 
 hook: bundle.js venv
 	./venv/bin/python3 -u loader3.py

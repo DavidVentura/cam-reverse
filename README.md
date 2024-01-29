@@ -18,9 +18,7 @@ The hooks used with frida are at `frida-hooks.js`, but it's mostly a playground 
 There's also a partial Wireshark dissector at `dissector.lua`. You can install it with `make install-wireshark-dissector`.
 
 ## Running
-To execute the server, run `make run`; JPEG files and `audio.pcm` will be created in a folder named `captures`.
-
-There's no live-stream server built into this project yet.
+To execute the HTTP server, run `make run`; you can access the JPEG stream at http://localhost:1234/ and a file `audio.pcm` will be created.
 
 ## Protocol
 
