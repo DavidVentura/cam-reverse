@@ -4,8 +4,9 @@ import { Session } from "./server.js";
 import { u16_swap, u32_swap } from "./utils.js";
 import { hexdump } from "./hexdump.js";
 import { XqBytesDec } from "./func_replacements.js";
+import { RemoteInfo } from "node:dgram";
 
-let curImage = null;
+let curImage: Buffer | null = null;
 
 export const notImpl = (_: Session, dv: DataView) => {
   const raw = dv.readU16();
@@ -25,18 +26,18 @@ export const handle_P2PAlive = (session: Session, _: DataView) => {
   const b = create_P2pAliveAck();
   session.send(b);
 };
-export const handle_PunchPkt = (session: Session, dv: DataView) => {
+export const handle_PunchPkt = (session: Session, dv: DataView, rinfo: RemoteInfo) => {
   const punchCmd = dv.readU16();
   const len = dv.add(2).readU16();
   const prefix = dv.add(4).readString(4);
   const serial = dv.add(8).readU64().toString();
   const suffix = dv.add(16).readString(len - 16 + 4); // 16 = offset, +4 header
   // f141 20 BATC 609531 EXLVS
-  session.eventEmitter.emit("connect", prefix.toString() + serial + suffix.toString());
+  session.eventEmitter.emit("connect", prefix.toString() + serial + suffix.toString(), rinfo);
   session.send(create_P2pRdy(dv.add(4).readByteArray(len)));
 };
 
-export const createResponseForControlCommand = (session: Session, dv: DataView): DataView | null => {
+export const createResponseForControlCommand = (session: Session, dv: DataView): DataView | undefined => {
   const start_type = dv.add(8).readU16(); // 0xa11 on control; data starts here on DATA pkt
   const cmd_id = dv.add(10).readU16(); // 0x1120
   const payload_len = u16_swap(dv.add(0xc).readU16());
@@ -124,7 +125,9 @@ const deal_with_data = (session: Session, dv: DataView) => {
       }
       curImage = Buffer.from(data.buffer);
     } else {
-      curImage = Buffer.concat([curImage, Buffer.from(data.buffer)]);
+      if (curImage != null) {
+        curImage = Buffer.concat([curImage, Buffer.from(data.buffer)]);
+      }
     }
   }
 };
@@ -154,7 +157,7 @@ export const handle_Drw = (session: Session, dv: DataView) => {
     deal_with_data(session, dv);
   } else {
     const b = createResponseForControlCommand(session, dv);
-    if (b != null) {
+    if (b != undefined) {
       session.send(b);
     }
   }
