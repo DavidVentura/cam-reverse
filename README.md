@@ -1,4 +1,4 @@
-Re-implementation of the "ilnk" protocol used on some cheap (\<$5) IP cameras (sometimes branded as 'X5' or 'A9').
+Re-implementation of the "iLnk"/"iLnkP2P"/"PPPP" protocol used on some cheap (\<$5) IP cameras (sometimes branded as 'X5' or 'A9').
 
 * Bought [here](https://www.aliexpress.com/item/1005006287788979.html).
   * Waiting for [this A9 camera](https://www.aliexpress.com/item/1005006117593880.html) to validate support.
@@ -15,7 +15,7 @@ The headers reversed with Ghidra are at `types/all.h`. They are almost not used 
 
 The hooks used with frida are at `frida-hooks.js`, but it's mostly a playground - some useful functions got deleted once I understood the protocol.
 
-There's also a pretty crappy Wireshark dissector at `dissector.lua`. You can install it with `make install-wireshark-dissector`.
+There's also a partial Wireshark dissector at `dissector.lua`. You can install it with `make install-wireshark-dissector`.
 
 ## Running
 To execute the server, run `make run`; JPEG files and `audio.pcm` will be created in a folder named `captures`.
