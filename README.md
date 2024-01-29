@@ -102,3 +102,8 @@ adb install-multiple *apk
 
 [docs](https://frida.re/docs/android/)
 
+### Start frida server
+
+```
+adb shell 'su -c nohup /data/local/tmp/frida-server-16.1.11-android-arm64 &'
+```
