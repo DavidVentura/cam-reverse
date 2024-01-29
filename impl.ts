@@ -70,6 +70,14 @@ export const SendDevStatus = (session: Session): DataView => {
   return makeDataReadWrite(session, ControlCommands.DevStatus, null);
 };
 
+export const SendWifiSettings = (session: Session): DataView => {
+  return makeDataReadWrite(session, ControlCommands.WifiSettings, null);
+};
+
+export const SendListWifi = (session: Session): DataView => {
+  return makeDataReadWrite(session, ControlCommands.ListWifi, null);
+};
+
 export const SendStartVideo = (session: Session): DataView => {
   return makeDataReadWrite(session, ControlCommands.StartVideo, null);
 };
@@ -82,6 +90,13 @@ export const SendUsrChk = (session: Session, username: string, password: string)
   cmd_payload.writeByteArray(str2byte(username));
   cmd_payload.add(0x20).writeByteArray(str2byte(password));
   return makeDataReadWrite(session, ControlCommands.ConnectUser, cmd_payload);
+};
+
+export const create_LanSearch = (): DataView => {
+  const outbuf = new DataView(new Uint8Array(4).buffer);
+  outbuf.writeU16(Commands.LanSearch);
+  outbuf.add(2).writeU16(0x0);
+  return outbuf;
 };
 
 export const create_P2pRdy = (inbuf: DataView): DataView => {
