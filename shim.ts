@@ -54,13 +54,13 @@ declare global {
     readString(len: number): string;
     readU16(): number;
     readU32(): number;
-    readU64(): number;
+    readU64(): bigint;
     readU8(): number;
-    writeByteArray(arr: Uint8Array | number[]): undefined;
-    writeU16(n: number): undefined;
-    writeU32(n: number): undefined;
-    writeU64(n: number): undefined;
-    writeU8(n: number): undefined;
+    writeByteArray(arr: Uint8Array | number[]): void;
+    writeU16(n: number): void;
+    writeU32(n: number): void;
+    writeU64(n: bigint): void;
+    writeU8(n: number): void;
   }
 }
 export default global;
