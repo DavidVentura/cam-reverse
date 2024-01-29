@@ -1,9 +1,8 @@
 import { createSocket, RemoteInfo } from "node:dgram";
-import { createWriteStream } from "node:fs";
-import { create_LanSearch } from "./func_replacements.js";
 import { Commands, CommandsByValue } from "./datatypes.js";
 import { handle_P2PAlive, handle_PunchPkt, handle_P2PRdy, handle_Drw, notImpl, noop } from "./handlers.js";
 import { hexdump } from "./hexdump.js";
+import { SendDevStatus } from "./impl.js";
 import EventEmitter from "node:events";
 
 export type Session = {
@@ -25,7 +24,7 @@ type opt = {
 type msgCb = (session: Session, msg: Buffer, rinfo: RemoteInfo, options: opt) => void;
 type connCb = (session: Session) => void;
 
-const makeSession = (cb: msgCb, connCb: connCb, options: opt): Session => {
+export const makeSession = (cb: msgCb, connCb: connCb, options: opt): Session => {
   const sock = createSocket("udp4");
 
   sock.on("error", (err) => {
@@ -59,7 +58,6 @@ const makeSession = (cb: msgCb, connCb: connCb, options: opt): Session => {
         console.log(hexdump(msg.buffer, { ansi: options.ansi, ansiColor: 0 }));
       }
       if (raw == Commands.Drw) {
-        // not sure why cmd == Commands.Drw does not work
         session.outgoingCommandId++;
       }
       sock.send(new Uint8Array(msg.buffer), SEND_PORT, session.dst_ip);
@@ -70,7 +68,7 @@ const makeSession = (cb: msgCb, connCb: connCb, options: opt): Session => {
   return session;
 };
 
-const Handlers: Record<keyof typeof Commands, PacketHandler> = {
+export const Handlers: Record<keyof typeof Commands, PacketHandler> = {
   PunchPkt: handle_PunchPkt,
 
   Close: notImpl,
@@ -95,52 +93,3 @@ const Handlers: Record<keyof typeof Commands, PacketHandler> = {
   RlyHelloAck: notImpl, // always
   RlyHelloAck2: notImpl, // if len >1??
 };
-
-const s = makeSession(
-  (session, msg, rinfo, options) => {
-    const ab = new Uint8Array(msg).buffer;
-    const dv = new DataView(ab);
-    const cmd = CommandsByValue[dv.readU16()];
-    if (options.debug) {
-      console.log(`<< ${cmd}`);
-      console.log(hexdump(msg.buffer, { ansi: options.ansi, ansiColor: 1 }));
-    }
-    Handlers[cmd](session, dv, rinfo);
-  },
-  (session) => {
-    const int = setInterval(() => {
-      let buf = new DataView(new Uint8Array(4).buffer);
-      create_LanSearch(buf);
-      session.broadcast(buf);
-    }, 1000);
-  },
-  { debug: false, ansi: false },
-);
-
-let cur_image_index = 0;
-const audioFd = createWriteStream(`captures/audio.pcm`);
-s.eventEmitter.on("frame", (frame: Buffer) => {
-  const fname = `captures/${cur_image_index.toString().padStart(4, "0")}.jpg`;
-  let cur_image = createWriteStream(fname);
-  cur_image_index++;
-  cur_image.write(frame);
-  cur_image.close();
-  // console.log("got an entire frame", frame.length);
-});
-
-let i = 0;
-s.eventEmitter.on("audio", (frame: Buffer) => {
-  audioFd.write(frame);
-  if (i == 20) {
-    const buf = SendDevStatus(s);
-    s.send(buf);
-    i = 0;
-  }
-  i++;
-});
-
-s.eventEmitter.on("connect", (name: string, rinfo: RemoteInfo) => {
-  console.log(`Connected to ${name} - ${rinfo.address}`);
-  s.outgoingCommandId = 0;
-  s.dst_ip = rinfo.address;
-});
