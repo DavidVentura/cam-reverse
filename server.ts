@@ -1,4 +1,4 @@
-import dgram from "node:dgram";
+import { createSocket, RemoteInfo } from "node:dgram";
 import { createWriteStream } from "node:fs";
 import { create_LanSearch } from "./func_replacements.js";
 import { Commands, CommandsByValue } from "./datatypes.js";
@@ -12,20 +12,21 @@ export type Session = {
   outgoingCommandId: number;
   ticket: number[];
   eventEmitter: EventEmitter;
+  dst_ip: string;
 };
 
-export type PacketHandler = (session: Session, dv: DataView) => void;
+export type PacketHandler = (session: Session, dv: DataView, rinfo: RemoteInfo) => void;
 
 type opt = {
   debug: boolean;
   ansi: boolean;
 };
 
-type msgCb = (session: Session, msg: Buffer, rinfo: any, options: opt) => void;
+type msgCb = (session: Session, msg: Buffer, rinfo: RemoteInfo, options: opt) => void;
 type connCb = (session: Session) => void;
 
-const makeSession = (cb: msgCb, connCb: connCb, options?: opt): Session => {
-  const sock = dgram.createSocket("udp4");
+const makeSession = (cb: msgCb, connCb: connCb, options: opt): Session => {
+  const sock = createSocket("udp4");
 
   sock.on("error", (err) => {
     console.error(`sock error:\n${err.stack}`);
@@ -42,7 +43,6 @@ const makeSession = (cb: msgCb, connCb: connCb, options?: opt): Session => {
   });
 
   const RECV_PORT = 49512; // important?
-  const DST_IP = "192.168.1.1";
   const BCAST_IP = "192.168.1.255";
   const SEND_PORT = 32108;
   sock.bind(RECV_PORT);
@@ -62,9 +62,10 @@ const makeSession = (cb: msgCb, connCb: connCb, options?: opt): Session => {
         // not sure why cmd == Commands.Drw does not work
         session.outgoingCommandId++;
       }
-      sock.send(new Uint8Array(msg.buffer), SEND_PORT, DST_IP);
+      sock.send(new Uint8Array(msg.buffer), SEND_PORT, session.dst_ip);
     },
     broadcast: (msg: DataView) => sock.send(new Uint8Array(msg.buffer), SEND_PORT, BCAST_IP),
+    dst_ip: BCAST_IP,
   };
   return session;
 };
@@ -96,7 +97,7 @@ const Handlers: Record<keyof typeof Commands, PacketHandler> = {
 };
 
 const s = makeSession(
-  (session, msg, _, options) => {
+  (session, msg, rinfo, options) => {
     const ab = new Uint8Array(msg).buffer;
     const dv = new DataView(ab);
     const cmd = CommandsByValue[dv.readU16()];
@@ -104,7 +105,7 @@ const s = makeSession(
       console.log(`<< ${cmd}`);
       console.log(hexdump(msg.buffer, { ansi: options.ansi, ansiColor: 1 }));
     }
-    Handlers[cmd](session, dv);
+    Handlers[cmd](session, dv, rinfo);
   },
   (session) => {
     const int = setInterval(() => {
@@ -124,14 +125,22 @@ s.eventEmitter.on("frame", (frame: Buffer) => {
   cur_image_index++;
   cur_image.write(frame);
   cur_image.close();
-  console.log("got an entire frame", frame.length);
+  // console.log("got an entire frame", frame.length);
 });
 
+let i = 0;
 s.eventEmitter.on("audio", (frame: Buffer) => {
   audioFd.write(frame);
+  if (i == 20) {
+    const buf = SendDevStatus(s);
+    s.send(buf);
+    i = 0;
+  }
+  i++;
 });
 
-s.eventEmitter.on("connect", (name: string) => {
-  console.log(`Connected to ${name}`);
+s.eventEmitter.on("connect", (name: string, rinfo: RemoteInfo) => {
+  console.log(`Connected to ${name} - ${rinfo.address}`);
   s.outgoingCommandId = 0;
+  s.dst_ip = rinfo.address;
 });
