@@ -44,7 +44,10 @@ DataView.prototype.readByteArray = function (len) {
 };
 DataView.prototype.readString = function (len) {
   const ba = this.readByteArray(len);
-  return String.fromCharCode.apply(null, new Uint8Array(ba.buffer));
+  const s = String.fromCharCode.apply(null, new Uint8Array(ba.buffer));
+  const nullByte = s.indexOf("\0");
+  if (nullByte !== -1) return s.substring(0, nullByte);
+  return s;
 };
 
 declare global {
