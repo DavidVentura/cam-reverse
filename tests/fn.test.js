@@ -5,7 +5,7 @@ import assert from "assert";
 import { XqBytesDec, XqBytesEnc } from "../func_replacements.js";
 import { createResponseForControlCommand } from "../handlers.js";
 import { hexdump } from "../hexdump.js";
-import { SendUsrChk } from "../impl.ts";
+import { SendDevStatus, SendUsrChk } from "../impl.ts";
 import { placeholderTypes, sprintf } from "../utils.js";
 
 describe("debug_tools", () => {
@@ -128,12 +128,13 @@ describe("make packet", () => {
     const expected_str =
       "f1d000b0d1000000110a2010a400ff00000000006f01010101010101010101010101010101010101010101010101010160656c686f01010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010160656c68";
     const expected = hstrToBA(expected_str);
-    assert.deepEqual(SendUsrChk("admin", "admin").buffer, expected);
+    const sess = { outgoingCommandId: 0, ticket: [0, 0, 0, 0] };
+    assert.deepEqual(SendUsrChk(sess, "admin", "admin").buffer, expected);
   });
   it("builds a good SendStartVideo", () => {
     const input_pkt_str = "f1d00018d1000000110a20110c00ff000000000064504737fe010101";
     // token-in = 0x64 0x50 0x47 0x37
-    const _expected_str = "f1d00114d1000000110a1030080100006551463601010101";
+    const _expected_str = "f1d00010d1000000110a10300400000065514636";
     // output is 0x3010; 'start video'; hardcoded but shouldnt
     const expected = hstrToBA(_expected_str);
 
@@ -141,5 +142,13 @@ describe("make packet", () => {
     const got = createResponseForControlCommand(sess, new DataView(hstrToBA(input_pkt_str)));
     assert.deepEqual(got.buffer, expected);
     assert.deepEqual(sess.ticket, [0x65, 0x51, 0x46, 0x36]);
+  });
+  it("builds a good SendDevStatus", () => {
+    const sess = { outgoingCommandId: 0, ticket: [1, 2, 3, 4] };
+    const _expected_str = "f1d00010d1000000110a08100400000001020304";
+    const expected = hstrToBA(_expected_str);
+
+    const got = SendDevStatus(sess);
+    assert.deepEqual(got.buffer, expected);
   });
 });

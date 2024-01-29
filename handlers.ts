@@ -164,6 +164,6 @@ export const handle_Drw = (session: Session, dv: DataView) => {
 };
 
 export const handle_P2PRdy = (session: Session, _: DataView) => {
-  const b = SendUsrChk("admin", "admin", session.outgoingCommandId);
+  const b = SendUsrChk(session, "admin", "admin");
   session.send(b);
 };
