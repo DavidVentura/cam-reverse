@@ -36,21 +36,24 @@ export const ControlCommands = {
   // TODO: flip these..
   ConnectUser: 0x2010,
   ConnectUserAck: 0x2011,
+  // CloseSession: 0x3110,
+  // CloseSessionAck: 0x3111,
   DevStatus: 0x0810,
   DevStatusAck: 0x0811,
+  WifiSettings: 0x0260,
+  WifiSettingsAck: 0x0261,
   ListWifi: 0x0360,
   ListWifiAck: 0x0361,
-  WifiSettings: 0x0261,
   StartVideo: 0x1030,
 };
 
 export const ccDest: Record<number, number> = {
   [ControlCommands.ConnectUser]: 0xff00,
   [ControlCommands.DevStatus]: 0x0000,
-  [ControlCommands.ListWifi]: 0x0000,
-  [ControlCommands.ListWifiAck]: 0x0361,
   [ControlCommands.StartVideo]: 0x0000,
+  [ControlCommands.ListWifi]: 0x0000,
+  [ControlCommands.WifiSettings]: 0x0000,
+  [ControlCommands.ListWifiAck]: 0xaa55,
   [ControlCommands.ConnectUserAck]: 0xaa55,
   [ControlCommands.DevStatusAck]: 0xaa55,
-  [ControlCommands.WifiSettings]: 0xaa55,
 };
