@@ -88,6 +88,39 @@ sequenceDiagram
     end
 ```
 
+### Discrepancies between cameras
+
+1. Wifi Strength
+	- A9 reports '100%' strength
+	- X5 reports different strength values
+
+Seems like the A9 cameras brick themselves if you:
+1- Give them a bad wifi password
+2- Give them a good wifi password, with no internet
+
+Have not yet tried to give it internet access.
+
+After bricking itself, it reports very broken configuration via serial:
+
+```
+network interface: ƀ (Default)
+MTU: 51050
+MAC: 06 18 40 06 3e 51 b4 e2 c6 80 06 3f 77 30 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 74 00 00 00 01 00 00 00 9c ea 01 20 00 00 00 00 00 00 00 00 00 28 60 00 00 00 00 00 00 00 00 00 06 4e 00 20 2a 00 2a 00 80 00 00 00 00 00 ff ff ff ff   ff ff 3e 51 b4 e2 c6 80 08 06 00 01 08 00 06 04 00 01 3e 51 b4 e2 c6 80 01 01 01 01 00 00 00 00 00 00 01 01 01 01 00 28 74 00 00 00 00 00 00 00 00 00 58 4e 00 20 48 00 48 00 80 00 00 00 00 00 ff ff ff ff ff ff 3e 51 b4 e2 c6 80 08 06 45 00 00   48 00 51 00 00 ff 11 c8 be 01 01 01 01 23 9c cc f7 7d 6c
+FLAGS: DOWN LINK_DOWN IGMP
+ip address: 1.1.1.1
+gw address: 1.1.1.1
+net mask  : 1.1.1.1
+
+network i
+nterface: ^@^@
+MTU: 0
+MAC: 
+FLAGS: DOWN LINK_DOWN  
+ip address: 127.0.0.1
+gw address: 127.0.0.1
+net mask  : 255.0.0.0   
+```
+
 ### Take APK from emulator/sacrificial device
 ```
 adb shell pm list packages | grep ysx
