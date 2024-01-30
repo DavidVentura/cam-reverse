@@ -140,6 +140,8 @@ export const createResponseForControlCommand = (session: Session, dv: DataView):
   }
 };
 
+let seq = 0;
+let frame_is_bad = false;
 const deal_with_data = (session: Session, dv: DataView) => {
   const pkt_len = dv.add(2).readU16();
   // data
@@ -148,6 +150,7 @@ const deal_with_data = (session: Session, dv: DataView) => {
   const m_hdr = dv.add(8).readByteArray(4);
   let is_new_image = true;
   let audio = true;
+  const pkt_id = dv.add(6).readU16();
   for (let i = 0; i < 4; i++) {
     is_new_image = is_new_image && m_hdr.add(i).readU8() == JPEG_HEADER[i];
     audio = audio && m_hdr.add(i).readU8() == AUDIO_HEADER[i];
@@ -165,11 +168,27 @@ const deal_with_data = (session: Session, dv: DataView) => {
   } else {
     const data = dv.add(8).readByteArray(pkt_len - 4);
     if (is_new_image) {
-      if (curImage != null) {
+      if (curImage != null && !frame_is_bad) {
         session.eventEmitter.emit("frame", curImage);
       }
+
+      frame_is_bad = false;
       curImage = Buffer.from(data.buffer);
+      seq = pkt_id;
     } else {
+      if (pkt_id <= seq) {
+        // retransmit
+        return;
+      }
+      if (frame_is_bad) {
+        return;
+      }
+      if (pkt_id > seq + 1) {
+        // missed some packets -- filling with zeroes still produces a broken image
+        frame_is_bad = true;
+        return;
+      }
+      seq = pkt_id;
       if (curImage != null) {
         curImage = Buffer.concat([curImage, Buffer.from(data.buffer)]);
       }
