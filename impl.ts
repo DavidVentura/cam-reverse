@@ -82,6 +82,12 @@ export const SendStartVideo = (session: Session): DataView => {
   return makeDataReadWrite(session, ControlCommands.StartVideo, null);
 };
 
+export const SendReboot = (session: Session): DataView => {
+  //const dv = new DataView(new Uint8Array(8).fill(0).buffer);
+  let dv = null;
+  return makeDataReadWrite(session, ControlCommands.Reboot, dv);
+};
+
 export const SendUsrChk = (session: Session, username: string, password: string): DataView => {
   let buf = new Uint8Array(0x20 + 0x80);
   buf.fill(0);
@@ -111,6 +117,13 @@ export const create_P2pRdy = (inbuf: DataView): DataView => {
 export const create_P2pAlive = (): DataView => {
   const outbuf = new DataView(new Uint8Array(4).buffer);
   outbuf.writeU16(Commands.P2PAlive);
+  outbuf.add(2).writeU16(0);
+  return outbuf;
+};
+
+export const create_P2pClose = (): DataView => {
+  const outbuf = new DataView(new Uint8Array(4).buffer);
+  outbuf.writeU16(Commands.Close);
   outbuf.add(2).writeU16(0);
   return outbuf;
 };
