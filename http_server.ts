@@ -3,9 +3,8 @@ import { createWriteStream } from "node:fs";
 import http from "node:http";
 
 import { CommandsByValue } from "./datatypes.js";
-import { create_LanSearch } from "./func_replacements.js";
 import { hexdump } from "./hexdump.js";
-import { create_P2pAlive } from "./impl.js";
+import { create_LanSearch, create_P2pAlive } from "./impl.js";
 import { Handlers, makeSession } from "./server.js";
 
 const s = makeSession(
@@ -23,11 +22,11 @@ const s = makeSession(
   (session) => {
     // ther should be a better way of executing periodic status update
     // requests per device
+    let buf = create_LanSearch();
     const int = setInterval(() => {
-      let buf = new DataView(new Uint8Array(4).buffer);
-      create_LanSearch(buf);
       session.broadcast(buf);
-    }, 1000);
+    }, 2000);
+    session.broadcast(buf);
   },
   { debug: false, ansi: false },
 );
@@ -54,15 +53,22 @@ s.eventEmitter.on("connect", (name: string, rinfo: RemoteInfo) => {
   s.outgoingCommandId = 0;
   s.dst_ip = rinfo.address;
 
-  const int = setInterval(() => {
-    let buf = create_P2pAlive();
-    if (Date.now() - s.lastReceivedPacket > 500) {
-      s.send(buf);
-    }
-  }, 1000);
+  if (s.ticket.every((x) => x == 0)) {
+    const int = setInterval(() => {
+      let buf = create_P2pAlive();
+      if (Date.now() - s.lastReceivedPacket > 600) {
+        s.send(buf);
+      }
+    }, 400);
+  }
 });
 
 const server = http.createServer((req, res) => {
+  if (s.ticket.every((x) => x == 0)) {
+    res.writeHead(400);
+    res.end("Nothing online");
+    return;
+  }
   res.setHeader("Content-Type", `multipart/x-mixed-replace; boundary="${BOUNDARY}"`);
   responses.push(res);
 });
