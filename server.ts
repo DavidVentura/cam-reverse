@@ -57,14 +57,18 @@ export const makeSession = (cb: msgCb, connCb: connCb, options: opt): Session =>
       const cmd = CommandsByValue[raw];
       if (options.debug) {
         console.log(`>> ${cmd}`);
-        console.log(hexdump(msg.buffer, { ansi: options.ansi, ansiColor: 0 }));
+        if (raw != Commands.P2PAlive) {
+          console.log(hexdump(msg.buffer, { ansi: options.ansi, ansiColor: 0 }));
+        }
       }
       if (raw == Commands.Drw) {
         session.outgoingCommandId++;
       }
       sock.send(new Uint8Array(msg.buffer), SEND_PORT, session.dst_ip);
     },
-    broadcast: (msg: DataView) => sock.send(new Uint8Array(msg.buffer), SEND_PORT, BCAST_IP),
+    broadcast: (msg: DataView) => {
+      sock.send(new Uint8Array(msg.buffer), SEND_PORT, BCAST_IP);
+    },
     dst_ip: BCAST_IP,
   };
   return session;
