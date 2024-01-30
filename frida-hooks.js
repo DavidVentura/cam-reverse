@@ -154,14 +154,18 @@ const hook_udpsend = () => {
       const cmd = u16_swap(o.buf.readU16());
       const len = u16_swap(o.buf.add(2).readU16());
       const name = CommandsByValue[cmd];
+      const isData = o.buf.add(5).readU8();
       if (name != "P2PAlive") {
         let tstamp = Date.now();
         console.log(`${tstamp} UDP PKT RECV, len=${len}, cmd=${name}, 0x${cmd.toString(16)}, ret=${retval}`);
-        console.log(data);
+        if (cmd != Commands.Drw || (cmd == Commands.Drw && !isData)) {
+          // dont log data payloads
+          console.log(data);
+        }
       } else {
         console.log("< P2PAlive");
       }
-      if (cmd == Commands.Drw) {
+      if (cmd == Commands.Drw && !isData) {
         if (len > 0x18) {
           // pos(0xa11) == 8 + 0xc == 0x14 == 20
           const under = data.unwrap().add(0x14); //, len - 0x20;
