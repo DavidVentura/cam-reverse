@@ -1,9 +1,9 @@
 import "./shim.ts";
 
-import { ControlCommands, Commands, ccDest } from "./datatypes.js";
-import { Session } from "./server.js";
+import { ccDest, Commands, ControlCommands } from "./datatypes.js";
 import { XqBytesEnc } from "./func_replacements.js";
 import { hexdump } from "./hexdump.js";
+import { Session } from "./server.js";
 import { u16_swap } from "./utils.js";
 
 const str2byte = (s: string): number[] => {
@@ -80,6 +80,37 @@ export const SendListWifi = (session: Session): DataView => {
 
 export const SendStartVideo = (session: Session): DataView => {
   return makeDataReadWrite(session, ControlCommands.StartVideo, null);
+};
+
+export const SendVideoResolution = (session: Session, resol: 1 | 2 | 3 | 4): null => {
+  const pairs = {
+    1: [
+      // 320 x 240
+      [0x1, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0],
+      [0x7, 0x0, 0x0, 0x0, 0x20, 0x0, 0x0, 0x0],
+    ],
+    2: [
+      // 640x480
+      [0x7, 0x0, 0x0, 0x0, 0x50, 0x0, 0x0, 0x0],
+      [0x1, 0x0, 0x0, 0x0, 0x2, 0x0, 0x0, 0x0],
+    ],
+    3: [
+      // also 640x480 on the X5
+      [0x1, 0x0, 0x0, 0x0, 0x2, 0x0, 0x0, 0x0],
+      [0x7, 0x0, 0x0, 0x0, 0x78, 0x0, 0x0, 0x0],
+    ],
+    4: [
+      // also 640x480 on the X5
+      [0x1, 0x0, 0x0, 0x0, 0x2, 0x0, 0x0, 0x0],
+      [0x7, 0x0, 0x0, 0x0, 0xa0, 0x0, 0x0, 0x0],
+    ],
+  };
+
+  pairs[resol].forEach((payload: number[]) => {
+    const dv = new DataView(new Uint8Array(payload).buffer);
+    session.send(makeDataReadWrite(session, ControlCommands.VideoParamSet, dv));
+  });
+  return null;
 };
 
 export const SendReboot = (session: Session): DataView => {
