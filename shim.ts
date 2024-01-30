@@ -19,8 +19,14 @@ DataView.prototype.readU8 = function () {
 DataView.prototype.readU16 = function () {
   return this.getUint16(0);
 };
+DataView.prototype.readU16LE = function () {
+  return this.getUint16(0, true);
+};
 DataView.prototype.readU32 = function () {
   return this.getUint32(0);
+};
+DataView.prototype.readU32LE = function () {
+  return this.getUint32(0, true);
 };
 DataView.prototype.readU64 = function () {
   return this.getBigUint64(0);
@@ -56,7 +62,9 @@ declare global {
     readByteArray(len: number): DataView;
     readString(len: number): string;
     readU16(): number;
+    readU16LE(): number;
     readU32(): number;
+    readU32LE(): number;
     readU64(): bigint;
     readU8(): number;
     writeByteArray(arr: Uint8Array | number[]): void;
