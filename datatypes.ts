@@ -38,13 +38,15 @@ export const ControlCommands = {
   ConnectUserAck: 0x2011,
   // CloseSession: 0x3110,
   // CloseSessionAck: 0x3111,
-  DevStatus: 0x0810,
+  DevStatus: 0x0810, // CMD_SYSTEM_STATUS_GET
   DevStatusAck: 0x0811,
-  WifiSettings: 0x0260,
+  WifiSettings: 0x0260, // CMD_NET_WIFISETTING_GET
   WifiSettingsAck: 0x0261,
-  ListWifi: 0x0360,
+  ListWifi: 0x0360, // CMD_NET_WIFI_SCAN
   ListWifiAck: 0x0361,
-  StartVideo: 0x1030,
+  StartVideo: 0x1030, // CMD_PEER_LIVEVIDEO_START
+  Shutdown: 0x1010, //CMD_SYSTEM_SHUTDOWN,
+  Reboot: 0x1110, //CMD_SYSTEM_REBOOT,
 };
 
 export const ccDest: Record<number, number> = {
@@ -53,6 +55,7 @@ export const ccDest: Record<number, number> = {
   [ControlCommands.StartVideo]: 0x0000,
   [ControlCommands.ListWifi]: 0x0000,
   [ControlCommands.WifiSettings]: 0x0000,
+
   [ControlCommands.ListWifiAck]: 0xaa55,
   [ControlCommands.ConnectUserAck]: 0xaa55,
   [ControlCommands.DevStatusAck]: 0xaa55,
