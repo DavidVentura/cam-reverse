@@ -41,6 +41,54 @@ const hook_p2p_read = () => {
   );
 };
 
+const hook_Log = () => {
+  Java.perform(function () {
+    var Log = Java.use("android.util.Log");
+    Log.d.overload("java.lang.String", "java.lang.String", "java.lang.Throwable").implementation = function (a, b, c) {
+      console.log("The application reports Log.d(" + a.toString() + ", " + b.toString() + ")");
+      return this.d(a, b, c);
+    };
+    Log.v.overload("java.lang.String", "java.lang.String", "java.lang.Throwable").implementation = function (a, b, c) {
+      console.log("The application reports Log.v(" + a.toString() + ", " + b.toString() + ")");
+      return this.v(a, b, c);
+    };
+
+    Log.i.overload("java.lang.String", "java.lang.String", "java.lang.Throwable").implementation = function (a, b, c) {
+      console.log("The application reports Log.i(" + a.toString() + ", " + b.toString() + ")");
+      return this.i(a, b, c);
+    };
+    Log.e.overload("java.lang.String", "java.lang.String", "java.lang.Throwable").implementation = function (a, b, c) {
+      console.log("The application reports Log.e(" + a.toString() + ", " + b.toString() + ")");
+      return this.e(a, b, c);
+    };
+    Log.w.overload("java.lang.String", "java.lang.String", "java.lang.Throwable").implementation = function (a, b, c) {
+      console.log("The application reports Log.w(" + a.toString() + ", " + b.toString() + ")");
+      return this.w(a, b, c);
+    };
+    Log.d.overload("java.lang.String", "java.lang.String").implementation = function (a, b) {
+      console.log("The application reports Log.d(" + a.toString() + ", " + b.toString() + ")");
+      return this.d(a, b);
+    };
+    Log.v.overload("java.lang.String", "java.lang.String").implementation = function (a, b) {
+      console.log("The application reports Log.v(" + a.toString() + ", " + b.toString() + ")");
+      return this.v(a, b);
+    };
+
+    Log.i.overload("java.lang.String", "java.lang.String").implementation = function (a, b) {
+      console.log("The application reports Log.i(" + a.toString() + ", " + b.toString() + ")");
+      return this.i(a, b);
+    };
+    Log.e.overload("java.lang.String", "java.lang.String").implementation = function (a, b) {
+      console.log("The application reports Log.e(" + a.toString() + ", " + b.toString() + ")");
+      return this.e(a, b);
+    };
+    Log.w.overload("java.lang.String", "java.lang.String").implementation = function (a, b) {
+      console.log("The application reports Log.w(" + a.toString() + ", " + b.toString() + ")");
+      return this.w(a, b);
+    };
+  });
+};
+
 const hook___android_log_print = () => {
   const sym = "__android_log_print";
   hook_fn(
@@ -77,8 +125,19 @@ const hook_udpsend = () => {
       const data = args[0].readByteArray(args[1].toInt32());
       const cmd = u16_swap(args[0].readU16());
       const name = CommandsByValue[cmd];
-      console.log(`UDP PKT SEND ${name} (0x${cmd.toString(16)})`);
-      console.log(data);
+      if (name != "P2PAliveAck") {
+        if (name != "LanSearch" && name != "LanSearchExt") {
+          let cmd = "";
+          if (name == "Drw") {
+            cmd = args[0].add(0xa).readU16().toString(16);
+          }
+          let tstamp = Date.now();
+          console.log(`${tstamp} UDP PKT SEND ${name} (0x${cmd.toString(16)}) - CMD? ${cmd}`);
+          console.log(data);
+        }
+      } else {
+        console.log("> P2PAliveAck");
+      }
     },
     (retval) => {},
   );
@@ -95,13 +154,18 @@ const hook_udpsend = () => {
       const cmd = u16_swap(o.buf.readU16());
       const len = u16_swap(o.buf.add(2).readU16());
       const name = CommandsByValue[cmd];
-      console.log(`UDP PKT RECV, len=${len}, cmd=${name}, 0x${cmd.toString(16)}, ret=${retval}`);
-      console.log(data);
+      if (name != "P2PAlive") {
+        let tstamp = Date.now();
+        console.log(`${tstamp} UDP PKT RECV, len=${len}, cmd=${name}, 0x${cmd.toString(16)}, ret=${retval}`);
+        console.log(data);
+      } else {
+        console.log("< P2PAlive");
+      }
       if (cmd == Commands.Drw) {
         if (len > 0x18) {
           // pos(0xa11) == 8 + 0xc == 0x14 == 20
           const under = data.unwrap().add(0x14); //, len - 0x20;
-          XqBytesDec(under, len - 0x14, 4);
+          XqBytesDec(under, len - 0x10, 4);
           console.log("decrypted data");
           console.log(data);
         }
@@ -222,6 +286,7 @@ function doHooks() {
   var libnative_addr = Module.findBaseAddress("libvdp.so");
   if (libnative_addr) {
     hook___android_log_print();
+    hook_Log();
     // hook_in_out_buf("create_LstReq", 0x1c, 0x1c);
     //hook_in_out_buf("create_P2pRdy", 0x1c, 0x1c);
     hook_udpsend();
