@@ -88,6 +88,10 @@ sequenceDiagram
     end
 ```
 
+### Serial
+
+The A9 cameras have a TX/RX test points - connecting with UART at 921600 81N gives _read only_ access to some debug logs.
+
 ### Discrepancies between cameras
 
 1. Wifi Strength
