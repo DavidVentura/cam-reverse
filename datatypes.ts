@@ -47,6 +47,8 @@ export const ControlCommands = {
   StartVideo: 0x1030, // CMD_PEER_LIVEVIDEO_START
   Shutdown: 0x1010, //CMD_SYSTEM_SHUTDOWN,
   Reboot: 0x1110, //CMD_SYSTEM_REBOOT,
+  VideoParamSet: 0x1830, // CMD_PEER_VIDEOPARAM_SET
+  VideoParamGet: 0x1930, // CMD_PEER_VIDEOPARAM_GET
 };
 
 export const ccDest: Record<number, number> = {
