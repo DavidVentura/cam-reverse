@@ -1,10 +1,20 @@
+import { RemoteInfo } from "node:dgram";
+
 import { Commands, CommandsByValue, ControlCommands } from "./datatypes.js";
-import { create_P2pRdy, SendStartVideo, SendDevStatus, SendUsrChk } from "./impl.js";
+import { XqBytesDec } from "./func_replacements.js";
+import { hexdump } from "./hexdump.js";
+import {
+  create_P2pClose,
+  create_P2pRdy,
+  SendDevStatus,
+  SendListWifi,
+  SendReboot,
+  SendStartVideo,
+  SendUsrChk,
+  SendWifiSettings,
+} from "./impl.js";
 import { Session } from "./server.js";
 import { u16_swap, u32_swap } from "./utils.js";
-import { hexdump } from "./hexdump.js";
-import { XqBytesDec } from "./func_replacements.js";
-import { RemoteInfo } from "node:dgram";
 
 let curImage: Buffer | null = null;
 
@@ -26,6 +36,12 @@ export const handle_P2PAlive = (session: Session, _: DataView) => {
   const b = create_P2pAliveAck();
   session.send(b);
 };
+
+export const handle_P2PRdy = (session: Session, _: DataView) => {
+  const b = SendUsrChk(session, "admin", "admin");
+  session.send(b);
+};
+
 export const handle_PunchPkt = (session: Session, dv: DataView, rinfo: RemoteInfo) => {
   const punchCmd = dv.readU16();
   const len = dv.add(2).readU16();
@@ -50,7 +66,8 @@ export const createResponseForControlCommand = (session: Session, dv: DataView):
   if (payload_len > rotate_chr) {
     // 20 = 16 (header) + 4 (??)
     XqBytesDec(dv.add(20), payload_len - 4, rotate_chr);
-    // console.log(hexdump(dv));
+    console.log("Decrypted");
+    console.log(hexdump(dv));
   }
 
   if (cmd_id == ControlCommands.ConnectUserAck) {
@@ -68,31 +85,59 @@ export const createResponseForControlCommand = (session: Session, dv: DataView):
 
     console.log(`charging? ${charging}, batlevel? ${power}, wifi dbm: ${dbm}`);
   }
-  // 0x6102 = parseWifisetting
-  /*
-   *   01-28 18:19:55.558 12566  3872 F LogUtils: cmdParser,setting:WifiSettingBean{ssid='FTYC477259EDEDE', psk='12345678', ip='0.255.255.255', mask='0.0.0.0', gw='0.0.0.0', dns1='0.0.0.0', dns2='0.0.0.0', enable=0, wifiStatus=0  , mode=2, channel=0, authtype=0, dhcp=0}  [ file:IpcByte2ObjectParser.java, line:1361, method:ParseWifiSetting, class:com.ilnk.callback.IpcByte2ObjectParser ]
-  decrypted data
-             0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F  0123456789ABCDEF
-  00000000  f1 d0 01 18 d1 00 00 c9 11 0a 02 61 0c 01 00 00  ...........a....
-  00000010  00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00  ................
-  00000020  00 00 00 00 00 00 00 00 00 00 00 00 46 54 59 43  ............FTYC
-  00000030  34 37 37 32 35 39 45 44 45 44 45 00 00 00 00 00  477259EDEDE.....
-  00000040  00 00 00 00 00 00 00 00 00 00 00 00 31 32 33 34  ............1234
-  00000050  35 36 37 38 00 00 00 00 00 00 00 00 00 00 00 00  5678............
-  00000060  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  ................
-  00000070  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  ................
-  00000080  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  ................
-  00000090  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  ................
-  000000a0  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  ................
-  000000b0  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  ................
-  000000c0  00 00 00 00 00 00 00 00 00 00 00 00 30 2e 32 35  ............0.25
-  000000d0  35 2e 32 35 35 2e 32 35 35 00 00 00 30 2e 30 2e  5.255.255...0.0.
-  000000e0  30 2e 30 00 00 00 00 00 00 00 00 00 30 2e 30 2e  0.0.........0.0.
-  000000f0  30 2e 30 00 00 00 00 00 00 00 00 00 30 2e 30 2e  0.0.........0.0.
-  00000100  30 2e 30 00 00 00 00 00 00 00 00 00 30 2e 30 2e  0.0.........0.0.
-  00000110  30 2e 30 00 00 00 00 00 01 01 01 01              0.0.........
 
-  */
+  if (cmd_id == ControlCommands.WifiSettingsAck) {
+    const wifiSettings = {
+      enable: dv.add(0x14).readU32(),
+      status: dv.add(0x18).readU32(),
+      mode: dv.add(0x1c).readU32LE(),
+      channel: dv.add(0x20).readU32(),
+      authtype: dv.add(0x24).readU32(),
+      dhcp: dv.add(0x28).readU32(),
+      ssid: dv.add(0x2c).readString(0x20),
+      psk: dv.add(0x4c).readString(0x80),
+      ip: dv.add(0xcc).readString(0x10),
+      mask: dv.add(0xdc).readString(0x10),
+      gw: dv.add(0xec).readString(0x10),
+      dns1: dv.add(0xfc).readString(0x10),
+      dns2: dv.add(0x10c).readString(0x10),
+    };
+    const buf = SendListWifi(session);
+    console.log(`Current wifi settings: ${JSON.stringify(wifiSettings, null, 2)}`);
+    setTimeout(() => {
+      console.log("send now??");
+      const buf = SendListWifi(session);
+      session.send(buf);
+    }, 8000);
+    return buf;
+  }
+
+  if (cmd_id == ControlCommands.ListWifiAck) {
+    let startat = 0x10;
+    let msg_len = 91;
+    console.log("payload len", payload_len);
+    let msg_count = (payload_len - 9) / msg_len;
+    let remote_msg_count = dv.add(startat).readU32LE();
+    console.log("should get messages:", msg_count, "in payload: ", remote_msg_count);
+    startat += 4;
+    let items = [];
+    for (let i = 0; i < msg_count; i++) {
+      const wifiListItem = {
+        // startat = msg_len * i + 0x14;
+        ssid: dv.add(startat).readString(0x40),
+        mac: dv.add(startat + 0x40).readByteArray(8),
+        security: dv.add(startat + 0x48).readU32LE(),
+        dbm0: dv.add(startat + 0x4c).readU32LE(),
+        dbm1: dv.add(startat + 0x50).readU32LE(),
+        mode: dv.add(startat + 0x54).readU32LE(),
+        channel: dv.add(startat + 0x58).readU32LE(),
+      };
+      console.log(`Wifi Item: ${JSON.stringify(wifiListItem, null, 2)}`);
+      startat += msg_len;
+      console.log("ended at", startat);
+      items.push(wifiListItem);
+    }
+  }
 };
 
 const deal_with_data = (session: Session, dv: DataView) => {
@@ -161,9 +206,4 @@ export const handle_Drw = (session: Session, dv: DataView) => {
       session.send(b);
     }
   }
-};
-
-export const handle_P2PRdy = (session: Session, _: DataView) => {
-  const b = SendUsrChk(session, "admin", "admin");
-  session.send(b);
 };
