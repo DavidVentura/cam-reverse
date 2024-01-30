@@ -20,6 +20,7 @@ There's also a partial Wireshark dissector at `dissector.lua`. You can install i
 ## Running
 To execute the HTTP server, run `make run`; you can access the JPEG stream at http://localhost:1234/ and a file `audio.pcm` will be created.
 
+The roundtrip delay when using MJPEG is [~350ms](pics/delay.jpg).
 ## Protocol
 
 The protocol is weirdly complex, though very little communication is necessary to use the device
