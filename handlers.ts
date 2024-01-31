@@ -13,7 +13,7 @@ import {
   SendUsrChk,
   SendWifiSettings,
 } from "./impl.js";
-import { Session } from "./server.js";
+import { Session } from "./session.js";
 import { u16_swap, u32_swap } from "./utils.js";
 
 let curImage: Buffer | null = null;
