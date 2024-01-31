@@ -1,4 +1,5 @@
 import { createSocket, RemoteInfo } from "node:dgram";
+import { create_LanSearch, create_P2pAlive } from "./impl.js";
 import { Commands, CommandsByValue } from "./datatypes.js";
 import { handle_P2PAlive, handle_PunchPkt, handle_P2PRdy, handle_Drw, notImpl, noop } from "./handlers.js";
 import { hexdump } from "./hexdump.js";
@@ -28,7 +29,6 @@ type msgCb = (
   rinfo: RemoteInfo,
   options: opt,
 ) => void;
-type connCb = (session: Session) => void;
 
 const handleIncoming: msgCb = (session, handlers, msg, rinfo, options) => {
   const ab = new Uint8Array(msg).buffer;
@@ -42,11 +42,7 @@ const handleIncoming: msgCb = (session, handlers, msg, rinfo, options) => {
   session.lastReceivedPacket = Date.now();
 };
 
-export const makeSession = (
-  handlers: Record<keyof typeof Commands, PacketHandler>,
-  connCb: connCb,
-  options: opt,
-): Session => {
+export const makeSession = (handlers: Record<keyof typeof Commands, PacketHandler>, options: opt): Session => {
   const sock = createSocket("udp4");
 
   sock.on("error", (err) => {
@@ -60,7 +56,14 @@ export const makeSession = (
     const address = sock.address();
     console.log(`sock listening ${address.address}:${address.port}`);
     sock.setBroadcast(true);
-    connCb(session);
+
+    // ther should be a better way of executing periodic status update
+    // requests per device
+    let buf = create_LanSearch();
+    const int = setInterval(() => {
+      session.broadcast(buf);
+    }, 2000);
+    session.broadcast(buf);
   });
 
   const RECV_PORT = 49512; // important?
@@ -93,6 +96,21 @@ export const makeSession = (
     },
     dst_ip: BCAST_IP,
   };
+
+  session.eventEmitter.on("connect", (name: string, rinfo: RemoteInfo) => {
+    console.log(`Connected to ${name} - ${rinfo.address}`);
+    session.outgoingCommandId = 0;
+    session.dst_ip = rinfo.address;
+
+    if (session.ticket.every((x) => x == 0)) {
+      const int = setInterval(() => {
+        if (Date.now() - session.lastReceivedPacket > 600) {
+          let buf = create_P2pAlive();
+          session.send(buf);
+        }
+      }, 400);
+    }
+  });
   return session;
 };
 
