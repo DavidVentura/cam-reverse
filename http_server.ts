@@ -26,7 +26,7 @@ if (withAudio) {
 }
 
 const server = http.createServer((req, res) => {
-  if (s.ticket.every((x) => x == 0)) {
+  if (!s.connected) {
     res.writeHead(400);
     res.end("Nothing online");
     return;
