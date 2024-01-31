@@ -1,10 +1,16 @@
 {
+
   "include": ["*.ts"],
   "compilerOptions": {
     "target": "es6",
-    "module": "esnext",
+    "module": "es6",
+    "moduleResolution": "node",
     "esModuleInterop": true,
-    "moduleResolution": "node"
+    "preserveConstEnums": true,
+    "outDir": "./build/",
+    "rootDir": "./",
+    "strict": false,
+    "sourceMap": false
   }
 }
 
