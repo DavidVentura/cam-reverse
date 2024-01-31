@@ -1,5 +1,5 @@
 // hacked hexdump from frida to work on normal ArrayBuffers
-import "./shim.ts";
+import "./shim.js";
 export const hexdump = (target, options) => {
   options = options || {};
 

@@ -1,4 +1,4 @@
-import "./shim.ts";
+import "./shim.js";
 
 import { ccDest, Commands, ControlCommands } from "./datatypes.js";
 import { XqBytesEnc } from "./func_replacements.js";
