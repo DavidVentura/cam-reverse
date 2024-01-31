@@ -32,22 +32,24 @@ def dec(d):
     return ret
 
 def hexdump(dump):
-    print(" " * 9, end="")
+    print(" " * 10, end="")
     for i in range(0, 0xF+1):
         print(f"{i:2X}", end=" ")
 
-    print("    ", end="")
+    print("  ", end="")
     for i in range(0, 0xF+1):
         print(f"{i:X}", end="")
     print()
 
     for i in range(0, len(dump), 0x10):
         line = dump[i:i+0x10]
-        print(f"{i:08x}", end=" ")
+        print(f"{i:08x}", end="  ")
         for b in line:
             print(f"{b:02x}", end=" ")
 
-        print("    ", end="")
+        if len(line) < 16:
+            print("   " * (16 - len(line)), end="")
+        print("  ", end="")
         for b in line:
             rep = "."
             if chr(b) in string.printable:
