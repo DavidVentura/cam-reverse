@@ -107,7 +107,7 @@ export const makeSession = (
 
   session.eventEmitter.on("login", () => {
     console.log(`Logged in - ${session.devName}`);
-    startVideoStream(session);
+    onLogin(session);
   });
   return session;
 };
