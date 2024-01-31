@@ -1,14 +1,22 @@
 import { createSocket, RemoteInfo } from "node:dgram";
-import { create_LanSearch, create_P2pAlive } from "./impl.js";
+import { create_P2pAlive, DevSerial } from "./impl.js";
 import { Commands, CommandsByValue } from "./datatypes.js";
-import { handle_P2PAlive, handle_PunchPkt, handle_P2PRdy, handle_Drw, notImpl, noop } from "./handlers.js";
+import {
+  handle_P2PAlive,
+  handle_PunchPkt,
+  handle_P2PRdy,
+  handle_Drw,
+  notImpl,
+  noop,
+  makePunchPkt,
+} from "./handlers.js";
 import { hexdump } from "./hexdump.js";
 import EventEmitter from "node:events";
 import { SendVideoResolution, SendStartVideo, SendWifiDetails } from "./impl.js";
+import { opt } from "./options.js";
 
 export type Session = {
   send: (msg: DataView) => void;
-  broadcast: (msg: DataView) => void;
   outgoingCommandId: number;
   ticket: number[];
   eventEmitter: EventEmitter;
@@ -20,11 +28,6 @@ export type Session = {
 };
 
 export type PacketHandler = (session: Session, dv: DataView, rinfo: RemoteInfo) => void;
-
-type opt = {
-  debug: boolean;
-  ansi: boolean;
-};
 
 type msgCb = (
   session: Session,
@@ -46,7 +49,12 @@ const handleIncoming: msgCb = (session, handlers, msg, rinfo, options) => {
   session.lastReceivedPacket = Date.now();
 };
 
-export const makeSession = (handlers: Record<keyof typeof Commands, PacketHandler>, options: opt): Session => {
+export const makeSession = (
+  handlers: Record<keyof typeof Commands, PacketHandler>,
+  dev: DevSerial,
+  ra: RemoteInfo,
+  options: opt,
+): Session => {
   const sock = createSocket("udp4");
 
   sock.on("error", (err) => {
@@ -57,33 +65,31 @@ export const makeSession = (handlers: Record<keyof typeof Commands, PacketHandle
   sock.on("message", (msg, rinfo) => handleIncoming(session, handlers, msg, rinfo, options));
 
   sock.on("listening", () => {
-    const address = sock.address();
-    console.log(`sock listening ${address.address}:${address.port}`);
-    sock.setBroadcast(true);
-
-    // ther should be a better way of executing periodic status update
-    // requests per device
-    let buf = create_LanSearch();
-    const int = setInterval(() => {
-      session.broadcast(buf);
-    }, 2000);
-    session.timers.push(int);
-    session.broadcast(buf);
+    const buf = makePunchPkt(dev);
+    session.send(buf);
   });
 
-  //const BCAST_IP = "192.168.1.255";
-  const BCAST_IP = "192.168.40.101";
   const SEND_PORT = 32108;
   sock.bind();
+  const sessTimer = setInterval(() => {
+    const delta = Date.now() - session.lastReceivedPacket;
+    if (delta > 600) {
+      let buf = create_P2pAlive();
+      session.send(buf);
+    }
+    if (delta > 8000) {
+      session.eventEmitter.emit("disconnect");
+    }
+  }, 400);
 
   const session: Session = {
     outgoingCommandId: 0,
     ticket: [0, 0, 0, 0],
     lastReceivedPacket: 0,
     eventEmitter: new EventEmitter(),
-    connected: false,
-    timers: [],
-    devName: "",
+    connected: true,
+    timers: [sessTimer],
+    devName: dev.serial,
     send: (msg: DataView) => {
       const raw = msg.readU16();
       const cmd = CommandsByValue[raw];
@@ -95,38 +101,15 @@ export const makeSession = (handlers: Record<keyof typeof Commands, PacketHandle
       }
       sock.send(new Uint8Array(msg.buffer), SEND_PORT, session.dst_ip);
     },
-    broadcast: (msg: DataView) => {
-      sock.send(new Uint8Array(msg.buffer), SEND_PORT, BCAST_IP);
-    },
-    dst_ip: BCAST_IP,
+    dst_ip: ra.address,
   };
 
-  session.eventEmitter.on("disconnect", (name: string, rinfo: RemoteInfo) => {
-    console.log(`Disconnected from ${name} - ${rinfo.address}`);
+  session.eventEmitter.on("disconnect", () => {
+    console.log(`Disconnected from ${session.devName} - ${session.dst_ip}`);
     session.dst_ip = "0.0.0.0";
     session.connected = false;
     session.timers.forEach((x) => clearInterval(x));
     session.timers = [];
-  });
-
-  session.eventEmitter.on("connect", (name: string, rinfo: RemoteInfo) => {
-    console.log(`Connected to ${name} - ${rinfo.address}`);
-    session.outgoingCommandId = 0;
-    session.dst_ip = rinfo.address;
-    session.connected = true;
-    session.devName = name;
-
-    const int = setInterval(() => {
-      const delta = Date.now() - session.lastReceivedPacket;
-      if (delta > 600) {
-        let buf = create_P2pAlive();
-        session.send(buf);
-      }
-      if (delta > 8000) {
-        session.eventEmitter.emit("disconnect", name, rinfo);
-      }
-    }, 400);
-    session.timers.push(int);
   });
 
   session.eventEmitter.on("login", () => {

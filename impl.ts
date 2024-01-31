@@ -180,3 +180,16 @@ export const create_P2pClose = (): DataView => {
   outbuf.add(2).writeU16(0);
   return outbuf;
 };
+
+export type DevSerial = { prefix: string; serial: string; suffix: string; serialU64: bigint; devId: string };
+export const parse_PunchPkt = (dv: DataView): DevSerial => {
+  const punchCmd = dv.readU16();
+  const len = dv.add(2).readU16();
+  const prefix = dv.add(4).readString(4);
+  const serialU64 = dv.add(8).readU64();
+  const serial = serialU64.toString();
+  const suffix = dv.add(16).readString(len - 16 + 4); // 16 = offset, +4 header
+  const devId = prefix + serial + suffix;
+
+  return { prefix, serial, suffix, serialU64, devId };
+};

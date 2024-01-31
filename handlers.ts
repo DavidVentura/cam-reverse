@@ -3,7 +3,7 @@ import { RemoteInfo } from "node:dgram";
 import { Commands, CommandsByValue, ControlCommands } from "./datatypes.js";
 import { XqBytesDec } from "./func_replacements.js";
 import { hexdump } from "./hexdump.js";
-import { create_P2pRdy, SendListWifi, SendUsrChk } from "./impl.js";
+import { parse_PunchPkt, create_P2pRdy, SendListWifi, SendUsrChk, DevSerial } from "./impl.js";
 import { Session } from "./session.js";
 import { u16_swap, u32_swap } from "./utils.js";
 
@@ -33,15 +33,21 @@ export const handle_P2PRdy = (session: Session, _: DataView) => {
   session.send(b);
 };
 
+export const makePunchPkt = (dev: DevSerial): DataView => {
+  const len = dev.prefix.length + dev.suffix.length + 8;
+  const outbuf = new DataView(new Uint8Array(0x14).buffer); // 8 = serial u64
+  console.log(len, dev.prefix.length, dev.serialU64, dev.suffix.length);
+  console.log(dev.prefix, dev.serialU64, dev.suffix);
+  outbuf.add(0).writeString(dev.prefix);
+  outbuf.add(4).writeU64(dev.serialU64);
+  outbuf.add(8 + dev.prefix.length).writeString(dev.suffix);
+  return create_P2pRdy(outbuf);
+};
 export const handle_PunchPkt = (session: Session, dv: DataView, rinfo: RemoteInfo) => {
-  const punchCmd = dv.readU16();
-  const len = dv.add(2).readU16();
-  const prefix = dv.add(4).readString(4);
-  const serial = dv.add(8).readU64().toString();
-  const suffix = dv.add(16).readString(len - 16 + 4); // 16 = offset, +4 header
-  // f141 20 BATC 609531 EXLVS
-  session.eventEmitter.emit("connect", prefix.toString() + serial + suffix.toString(), rinfo);
-  session.send(create_P2pRdy(dv.add(4).readByteArray(len)));
+  const dev = parse_PunchPkt(dv);
+  session.eventEmitter.emit("connect", dev.devId, rinfo);
+  console.log("connect????");
+  session.send(makePunchPkt(dev));
 };
 
 export const createResponseForControlCommand = (session: Session, dv: DataView): DataView[] => {

@@ -55,11 +55,16 @@ DataView.prototype.readString = function (len) {
   if (nullByte !== -1) return s.substring(0, nullByte);
   return s;
 };
+DataView.prototype.writeString = function (str) {
+  const bytes = [...str].map((_, i) => str.charCodeAt(i));
+  return this.writeByteArray(bytes);
+};
 
 declare global {
   interface DataView {
     add(offset: number): DataView;
     readByteArray(len: number): DataView;
+    writeString(str: string): void;
     readString(len: number): string;
     readU16(): number;
     readU16LE(): number;
