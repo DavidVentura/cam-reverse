@@ -1,10 +1,10 @@
 import { createSocket, RemoteInfo } from "node:dgram";
-import { create_P2pAlive, DevSerial } from "./impl.js";
-import { Commands, CommandsByValue } from "./datatypes.js";
-import { handle_P2PAlive, handle_P2PRdy, handle_Drw, notImpl, noop, makePunchPkt } from "./handlers.js";
-import { hexdump } from "./hexdump.js";
 import EventEmitter from "node:events";
-import { SendVideoResolution, SendStartVideo, SendWifiDetails } from "./impl.js";
+
+import { Commands, CommandsByValue } from "./datatypes.js";
+import { handle_Drw, handle_P2PAlive, handle_P2PRdy, makePunchPkt, noop, notImpl } from "./handlers.js";
+import { hexdump } from "./hexdump.js";
+import { create_P2pAlive, DevSerial, SendStartVideo, SendVideoResolution, SendWifiDetails } from "./impl.js";
 import { opt } from "./options.js";
 
 export type Session = {
@@ -17,6 +17,9 @@ export type Session = {
   connected: boolean;
   devName: string;
   timers: ReturnType<typeof setInterval>[];
+  curImage: Buffer | null;
+  rcvSeqId: number;
+  frame_is_bad: boolean;
 };
 
 export type PacketHandler = (session: Session, dv: DataView, rinfo: RemoteInfo) => void;
@@ -82,7 +85,7 @@ export const makeSession = (
     eventEmitter: new EventEmitter(),
     connected: true,
     timers: [sessTimer],
-    devName: dev.serial,
+    devName: dev.devId,
     send: (msg: DataView) => {
       const raw = msg.readU16();
       const cmd = CommandsByValue[raw];
@@ -95,6 +98,9 @@ export const makeSession = (
       sock.send(new Uint8Array(msg.buffer), SEND_PORT, session.dst_ip);
     },
     dst_ip: ra.address,
+    curImage: null,
+    rcvSeqId: 0,
+    frame_is_bad: false,
   };
 
   session.eventEmitter.on("disconnect", () => {

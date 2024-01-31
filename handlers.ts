@@ -5,8 +5,6 @@ import { create_P2pRdy, SendListWifi, SendUsrChk, DevSerial } from "./impl.js";
 import { Session } from "./session.js";
 import { u16_swap, u32_swap } from "./utils.js";
 
-let curImage: Buffer | null = null;
-
 export const notImpl = (_: Session, dv: DataView) => {
   const raw = dv.readU16();
   const cmd = CommandsByValue[raw];
@@ -124,8 +122,6 @@ export const createResponseForControlCommand = (session: Session, dv: DataView):
   return [];
 };
 
-let seq = 0;
-let frame_is_bad = false;
 const deal_with_data = (session: Session, dv: DataView) => {
   const pkt_len = dv.add(2).readU16();
   // data
@@ -152,30 +148,31 @@ const deal_with_data = (session: Session, dv: DataView) => {
   } else {
     const data = dv.add(8).readByteArray(pkt_len - 4);
     if (is_new_image) {
-      if (curImage != null && !frame_is_bad) {
-        session.eventEmitter.emit("frame", curImage);
+      if (session.curImage != null && !session.frame_is_bad) {
+        session.eventEmitter.emit("frame");
       }
 
-      frame_is_bad = false;
-      curImage = Buffer.from(data.buffer);
-      seq = pkt_id;
+      session.frame_is_bad = false;
+      session.curImage = Buffer.from(data.buffer);
+      session.rcvSeqId = pkt_id;
     } else {
-      if (pkt_id <= seq) {
+      if (pkt_id <= session.rcvSeqId) {
         // retransmit
         return;
       }
-      if (frame_is_bad) {
+      if (session.frame_is_bad) {
         return;
       }
-      if (pkt_id > seq + 1) {
+      if (pkt_id > session.rcvSeqId + 1) {
         // missed some packets -- filling with zeroes still produces a broken
         // image
-        frame_is_bad = true;
+        session.frame_is_bad = true;
+        console.log(`Missed some packets on ${session.devName} -- skipping a frame`);
         return;
       }
-      seq = pkt_id;
-      if (curImage != null) {
-        curImage = Buffer.concat([curImage, Buffer.from(data.buffer)]);
+      session.rcvSeqId = pkt_id;
+      if (session.curImage != null) {
+        session.curImage = Buffer.concat([session.curImage, Buffer.from(data.buffer)]);
       }
     }
   }

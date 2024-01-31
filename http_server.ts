@@ -1,19 +1,21 @@
+import { RemoteInfo } from "dgram";
 import { createWriteStream } from "node:fs";
 import http from "node:http";
-import { RemoteInfo } from "dgram";
 
-import { Handlers, makeSession, Session, startVideoStream } from "./session.js";
 import { discoverDevices } from "./discovery.js";
 import { DevSerial } from "./impl.js";
+import { Handlers, makeSession, Session, startVideoStream } from "./session.js";
+import { ServerResponse } from "http";
 
 const opts = {
   debug: false,
   ansi: false,
-  discovery_ip: "192.168.40.101", //, "192.168.1.255";
+  discovery_ip: "192.168.40.255", //, "192.168.1.255"
+  // discovery_ip: "192.168.40.101",
 };
 
 let BOUNDARY = "a very good boundary line";
-let responses = [];
+let responses: Record<string, ServerResponse[]> = {};
 let sessions: Record<string, Session> = {};
 
 const server = http.createServer((req, res) => {
@@ -33,10 +35,14 @@ const server = http.createServer((req, res) => {
       return;
     }
     res.setHeader("Content-Type", `multipart/x-mixed-replace; boundary="${BOUNDARY}"`);
-    responses.push(res);
+    responses[devId].push(res);
+    res.on("close", () => {
+      responses[devId] = responses[devId].filter((r) => r !== res);
+      console.log("Conn closed, kicked");
+    });
   } else {
     res.write(`<html>`);
-    Object.keys(sessions).forEach((id) => res.write(`<a href="/camera/${id}">${id}</a>`));
+    Object.keys(sessions).forEach((id) => res.write(`<a href="/camera/${id}"><img src="/camera/${id}"/></a><hr/>`));
     res.write(`</html>`);
     res.end();
   }
@@ -48,21 +54,24 @@ devEv.on("discover", (rinfo: RemoteInfo, dev: DevSerial) => {
     console.log(`ignoring ${dev.devId} - ${rinfo.address}`);
     return;
   }
+
   console.log(`discovered ${dev.devId} - ${rinfo.address}`);
+  responses[dev.devId] = [];
   const s = makeSession(Handlers, dev, rinfo, startVideoStream, opts);
+
   const withAudio = false;
-  s.eventEmitter.on("frame", (frame: Buffer) => {
-    let s = `--${BOUNDARY}\r\n`;
-    s += "Content-Type: image/jpeg\r\n\r\n";
-    responses.forEach((res) => {
-      res.write(Buffer.from(s));
-      res.write(frame);
+  const header = Buffer.from(`--${BOUNDARY}\r\nContent-Type: image/jpeg\r\n\r\n`);
+
+  s.eventEmitter.on("frame", () => {
+    responses[dev.devId].forEach((res) => {
+      res.write(header);
+      res.write(s.curImage);
     });
   });
 
   s.eventEmitter.on("disconnect", () => {
     console.log("deleting from sessions");
-    sessions[dev.devId] = undefined;
+    delete sessions[dev.devId];
   });
   if (withAudio) {
     const audioFd = createWriteStream(`audio.pcm`);
