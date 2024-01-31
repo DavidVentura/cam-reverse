@@ -19,16 +19,14 @@ data = [
 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x31, 0x2f, 0x31, 0x2f, 0x31, 0x2f, 0x31, 0x01,
 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
 ]
-payload = data[0x14:]
-
 def dec(d):
     ret = []
-    for b in d:
+    for b in d[0x14:]:
         if b % 2:
             ret.append(b - 1)
         else:
             ret.append(b + 1)
-    ret = ret[4:] + ret[:4]
+    ret = d[:0x14] + ret[-4:] + ret[:-4]
     return ret
 
 def hexdump(dump):
@@ -52,11 +50,16 @@ def hexdump(dump):
         print("  ", end="")
         for b in line:
             rep = "."
-            if chr(b) in string.printable:
+            if chr(b) in string.digits or chr(b) in string.ascii_letters:
                 rep = chr(b)
             print(rep, end="")
 
         print("")
 
-_dec = dec(payload)
-hexdump(_dec)
+_dec = dec(data)
+hexdump(_dec[0x14:])
+#print([hex(n) for n in _dec])
+print("for test values, DEC")
+print("".join([f"{n:02x}" for n in _dec]))
+print("for test values, enc")
+print("".join([f"{n:02x}" for n in data]))

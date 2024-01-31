@@ -114,9 +114,34 @@ export const SendVideoResolution = (session: Session, resol: 1 | 2 | 3 | 4): nul
 };
 
 export const SendReboot = (session: Session): DataView => {
-  //const dv = new DataView(new Uint8Array(8).fill(0).buffer);
   let dv = null;
   return makeDataReadWrite(session, ControlCommands.Reboot, dv);
+};
+
+export const SendWifiDetails = (session: Session, ssid: string, password: string, dhcp: boolean): DataView => {
+  if (!dhcp) {
+    throw new Error("only DHCP is supported");
+  }
+  let buf = new Uint8Array(0x108).fill(0);
+  let cmd_payload = new DataView(buf.buffer);
+  let mask_reversed = "0.255.255.255";
+  // unclear which is which ))
+  let m_ip = "0.0.0.0";
+  let m_gw = "0.0.0.0";
+  let m_dns1 = "0.0.0.0";
+  let m_dns2 = "0.0.0.0";
+
+  cmd_payload.add(0x14).writeU8(1); // DHCP ?
+  cmd_payload.add(0x18).writeByteArray(str2byte(ssid));
+  cmd_payload.add(0x38).writeByteArray(str2byte(password));
+  cmd_payload.add(0xb8).writeByteArray(str2byte(mask_reversed));
+  cmd_payload.add(0xc8).writeByteArray(str2byte(m_ip));
+  cmd_payload.add(0xd8).writeByteArray(str2byte(m_gw));
+  cmd_payload.add(0xe8).writeByteArray(str2byte(m_dns1));
+  cmd_payload.add(0xf8).writeByteArray(str2byte(m_dns2));
+
+  const ret = makeDataReadWrite(session, ControlCommands.WifiSettingsSet, cmd_payload);
+  return ret;
 };
 
 export const SendUsrChk = (session: Session, username: string, password: string): DataView => {

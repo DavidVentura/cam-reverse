@@ -40,6 +40,7 @@ export const ControlCommands = {
   // CloseSessionAck: 0x3111,
   DevStatus: 0x0810, // CMD_SYSTEM_STATUS_GET
   DevStatusAck: 0x0811,
+  WifiSettingsSet: 0x0160, // CMD_NET_WIFISETTING_SET
   WifiSettings: 0x0260, // CMD_NET_WIFISETTING_GET
   WifiSettingsAck: 0x0261,
   ListWifi: 0x0360, // CMD_NET_WIFI_SCAN
