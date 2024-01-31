@@ -13,6 +13,8 @@ export type Session = {
   eventEmitter: EventEmitter;
   dst_ip: string;
   lastReceivedPacket: number;
+  connected: boolean;
+  timers: ReturnType<typeof setInterval>[];
 };
 
 export type PacketHandler = (session: Session, dv: DataView, rinfo: RemoteInfo) => void;
@@ -63,6 +65,7 @@ export const makeSession = (handlers: Record<keyof typeof Commands, PacketHandle
     const int = setInterval(() => {
       session.broadcast(buf);
     }, 2000);
+    session.timers.push(int);
     session.broadcast(buf);
   });
 
@@ -77,6 +80,8 @@ export const makeSession = (handlers: Record<keyof typeof Commands, PacketHandle
     ticket: [0, 0, 0, 0],
     lastReceivedPacket: 0,
     eventEmitter: new EventEmitter(),
+    connected: false,
+    timers: [],
     send: (msg: DataView) => {
       const raw = msg.readU16();
       const cmd = CommandsByValue[raw];
@@ -97,19 +102,31 @@ export const makeSession = (handlers: Record<keyof typeof Commands, PacketHandle
     dst_ip: BCAST_IP,
   };
 
+  session.eventEmitter.on("disconnect", (name: string, rinfo: RemoteInfo) => {
+    console.log(`Disconnected from ${name} - ${rinfo.address}`);
+    session.dst_ip = "0.0.0.0";
+    session.connected = false;
+    session.timers.forEach((x) => clearInterval(x));
+    session.timers = [];
+  });
+
   session.eventEmitter.on("connect", (name: string, rinfo: RemoteInfo) => {
     console.log(`Connected to ${name} - ${rinfo.address}`);
     session.outgoingCommandId = 0;
     session.dst_ip = rinfo.address;
+    session.connected = true;
 
-    if (session.ticket.every((x) => x == 0)) {
-      const int = setInterval(() => {
-        if (Date.now() - session.lastReceivedPacket > 600) {
-          let buf = create_P2pAlive();
-          session.send(buf);
-        }
-      }, 400);
-    }
+    const int = setInterval(() => {
+      const delta = Date.now() - session.lastReceivedPacket;
+      if (delta > 600) {
+        let buf = create_P2pAlive();
+        session.send(buf);
+      }
+      if (delta > 8000) {
+        session.eventEmitter.emit("disconnect", name, rinfo);
+      }
+    }, 400);
+    session.timers.push(int);
   });
   return session;
 };
