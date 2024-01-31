@@ -10,26 +10,6 @@ const str2byte = (s: string): number[] => {
   return Array.from(s).map((_, i) => s.charCodeAt(i));
 };
 
-const CmdSndProcHdr = (start: number, cmd: number, len: number, dest: number): DataView => {
-  len = len + 4; // hdr size?
-  let cmdHeader = new DataView(new Uint8Array(8).buffer);
-  cmdHeader.writeU16(u16_swap(start));
-  cmdHeader.add(2).writeU16(u16_swap(cmd));
-  cmdHeader.add(4).writeU16(u16_swap(len));
-  cmdHeader.add(6).writeU16(u16_swap(dest));
-  return cmdHeader;
-};
-
-const DrwHdr = (cmd: number, len: number, d1_or_d2: 0xd1 | 0xd2, m_chan: number, pkt_id: number): DataView => {
-  let retret = new DataView(new Uint8Array(len + 4).buffer);
-  retret.writeU16(cmd);
-  retret.add(2).writeU16(len); // buflen -4?
-  retret.add(4).writeU8(d1_or_d2);
-  retret.add(5).writeU8(m_chan); // chan? hardcoded
-  retret.add(6).writeU16(pkt_id);
-  return retret;
-};
-
 const makeDataReadWrite = (session: Session, command: number, data: DataView | null): DataView => {
   const DRW_HEADER_LEN = 0x10;
   const TOKEN_LEN = 0x4;
@@ -39,7 +19,7 @@ const makeDataReadWrite = (session: Session, command: number, data: DataView | n
   let pkt_len = DRW_HEADER_LEN + TOKEN_LEN;
   let payload_len = TOKEN_LEN;
   let bufCopy: Uint8Array | null = null;
-  if (data) {
+  if (data && data.byteLength > 4) {
     bufCopy = new Uint8Array(data.buffer);
     const bufDV = new DataView(bufCopy.buffer);
     // this mutates the buffer, don't want to mutate the caller
@@ -59,11 +39,15 @@ const makeDataReadWrite = (session: Session, command: number, data: DataView | n
   ret.add(12).writeU16(u16_swap(payload_len));
   ret.add(14).writeU16(ccDest[command]);
   ret.add(16).writeByteArray(session.ticket);
-  if (data) {
+  if (data && data.byteLength > 4) {
     ret.add(20).writeByteArray(bufCopy);
   }
 
   return ret;
+};
+
+export const SendIRToggle = (session: Session): DataView => {
+  return makeDataReadWrite(session, ControlCommands.IRToggle, null);
 };
 
 export const SendDevStatus = (session: Session): DataView => {
@@ -82,28 +66,41 @@ export const SendStartVideo = (session: Session): DataView => {
   return makeDataReadWrite(session, ControlCommands.StartVideo, null);
 };
 
+export const getVideoKey = (session: Session): void => {
+  // this is not useful at all
+  for (let i = 0; i < 12; i++) {
+    // payload len??
+    const payload = [0x0, i]; //, 0x0, 0x0, 0x0, 0x0];
+    const dv = new DataView(new Uint8Array(payload).buffer);
+    session.send(makeDataReadWrite(session, ControlCommands.VideoParamGet, dv));
+  }
+};
+
 export const SendVideoResolution = (session: Session, resol: 1 | 2 | 3 | 4): null => {
+  // seems like 0x1 = resolution, and is specified by ID not by size
+  // unclear what 0x2-0xf achieve - they report back as '0' always -- ignored?
   const pairs = {
     1: [
       // 320 x 240
       [0x1, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0],
-      [0x7, 0x0, 0x0, 0x0, 0x20, 0x0, 0x0, 0x0],
+      //[0x7, 0x0, 0x0, 0x0, 0x20, 0x0, 0x0, 0x0],
     ],
     2: [
       // 640x480
-      [0x7, 0x0, 0x0, 0x0, 0x50, 0x0, 0x0, 0x0],
       [0x1, 0x0, 0x0, 0x0, 0x2, 0x0, 0x0, 0x0],
+      //[0x7, 0x0, 0x0, 0x0, 0x50, 0x0, 0x0, 0x0],
     ],
     3: [
-      // also 640x480 on the X5
-      [0x1, 0x0, 0x0, 0x0, 0x2, 0x0, 0x0, 0x0],
-      [0x7, 0x0, 0x0, 0x0, 0x78, 0x0, 0x0, 0x0],
+      // also 640x480 on the X5 -- hwat now?
+      [0x1, 0x0, 0x0, 0x0, 0x3, 0x0, 0x0, 0x0],
+      //[0x7, 0x0, 0x0, 0x0, 0x78, 0x0, 0x0, 0x0],
     ],
     4: [
-      // also 640x480 on the X5
-      [0x1, 0x0, 0x0, 0x0, 0x2, 0x0, 0x0, 0x0],
-      [0x7, 0x0, 0x0, 0x0, 0xa0, 0x0, 0x0, 0x0],
+      // also 640x480 on the X5 -- hwat now?
+      [0x1, 0x0, 0x0, 0x0, 0x4, 0x0, 0x0, 0x0],
+      //[0x7, 0x0, 0x0, 0x0, 0xa0, 0x0, 0x0, 0x0],
     ],
+    // maybe the 0x7 = bitrate??
   };
 
   pairs[resol].forEach((payload: number[]) => {
