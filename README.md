@@ -11,6 +11,11 @@ Per pictures of the [X5](https://github.com/DavidVentura/cam-reverse/blob/master
 To execute the HTTP server, run `make run`; you can access the JPEG stream at http://localhost:1234/ and a file `audio.pcm` will be created.
 
 The roundtrip delay when using MJPEG is [~350ms](pics/delay.jpg?raw=true).
+
+## Pairing a new camera
+
+Connect to the device's access point and run `SSID=<your ssid> PSK=<your password> make pair`.
+
 ## Protocol
 
 The protocol is weirdly complex, though very little communication is necessary to use the device
