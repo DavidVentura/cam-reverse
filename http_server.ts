@@ -4,6 +4,7 @@ import http from "node:http";
 import { Handlers, makeSession } from "./server.js";
 
 const s = makeSession(Handlers, { debug: false, ansi: false });
+const withAudio = false;
 
 let BOUNDARY = "a very good boundary line";
 let responses = [];
@@ -17,10 +18,12 @@ s.eventEmitter.on("frame", (frame: Buffer) => {
   });
 });
 
-const audioFd = createWriteStream(`audio.pcm`);
-s.eventEmitter.on("audio", (frame: Buffer) => {
-  audioFd.write(frame);
-});
+if (withAudio) {
+  const audioFd = createWriteStream(`audio.pcm`);
+  s.eventEmitter.on("audio", (frame: Buffer) => {
+    audioFd.write(frame);
+  });
+}
 
 const server = http.createServer((req, res) => {
   if (s.ticket.every((x) => x == 0)) {
