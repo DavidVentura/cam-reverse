@@ -71,11 +71,10 @@ export const makeSession = (handlers: Record<keyof typeof Commands, PacketHandle
     session.broadcast(buf);
   });
 
-  const RECV_PORT = 49512; // important?
   //const BCAST_IP = "192.168.1.255";
   const BCAST_IP = "192.168.40.101";
   const SEND_PORT = 32108;
-  sock.bind(RECV_PORT);
+  sock.bind();
 
   const session: Session = {
     outgoingCommandId: 0,
