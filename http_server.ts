@@ -12,22 +12,29 @@ let responses = [];
 let sessions: Record<string, Session> = {};
 
 const server = http.createServer((req, res) => {
-  let devId = req.url.slice(1);
-  console.log("requested for", devId);
-  let s = sessions[devId];
+  if (req.url.startsWith("/camera/")) {
+    let devId = req.url.split("/")[2];
+    console.log("requested for", devId);
+    let s = sessions[devId];
 
-  if (s === undefined) {
-    res.writeHead(400);
-    res.end("invalid ID");
-    return;
+    if (s === undefined) {
+      res.writeHead(400);
+      res.end("invalid ID");
+      return;
+    }
+    if (!s.connected) {
+      res.writeHead(400);
+      res.end("Nothing online");
+      return;
+    }
+    res.setHeader("Content-Type", `multipart/x-mixed-replace; boundary="${BOUNDARY}"`);
+    responses.push(res);
+  } else {
+    res.write(`<html>`);
+    Object.keys(sessions).forEach((id) => res.write(`<a href="/camera/${id}">${id}</a>`));
+    res.write(`</html>`);
+    res.end();
   }
-  if (!s.connected) {
-    res.writeHead(400);
-    res.end("Nothing online");
-    return;
-  }
-  res.setHeader("Content-Type", `multipart/x-mixed-replace; boundary="${BOUNDARY}"`);
-  responses.push(res);
 });
 
 let devEv = discoverDevices(opts);
