@@ -1,21 +1,11 @@
 Re-implementation of the "iLnk"/"iLnkP2P"/"PPPP" protocol used on some cheap (\<$5) IP cameras (sometimes branded as 'X5' or 'A9').
 
-* Bought [here](https://www.aliexpress.com/item/1005006287788979.html).
-  * Waiting for [this A9 camera](https://www.aliexpress.com/item/1005006117593880.html) to validate support.
+* Bought [this X5](https://www.aliexpress.com/item/1005006287788979.html) and [this A9](https://www.aliexpress.com/item/1005006117593880.html).
 * App is [YsxLite](https://play.google.com/store/apps/details?id=com.ysxlite.cam&hl=en&gl=US)
 
 
-Per [pictures](https://github.com/DavidVentura/cam-reverse/blob/master/pics/pcb.jpg?raw=true) the main chip is TXW817 ([chinese](https://www.taixin-semi.com/Product/ProductDetail?productId=306), [eng, google translate](https://www-taixin--semi-com.translate.goog/Product/ProductDetail?productId=306&_x_tr_sl=auto&_x_tr_tl=en&_x_tr_hl=en&_x_tr_pto=wapp))
+Per pictures of the [X5](https://github.com/DavidVentura/cam-reverse/blob/master/pics/pcb.jpg?raw=true), [A9](https://github.com/DavidVentura/cam-reverse/blob/master/pics/pcb_a9.jpg?raw=true) the main chip is TXW817 ([chinese](https://www.taixin-semi.com/Product/ProductDetail?productId=306), [eng, google translate](https://www-taixin--semi-com.translate.goog/Product/ProductDetail?productId=306&_x_tr_sl=auto&_x_tr_tl=en&_x_tr_hl=en&_x_tr_pto=wapp))
 
-The interesting implementation is in `libvdp.so`, part of the apk bundle.
-
-Protocol reversing was done with a combination of static analysis of the shared object with [Ghidra](https://ghidra-sre.org/) and dynamic analysis with [Frida](https://frida.re/docs/javascript-api/).
-
-The headers reversed with Ghidra are at `types/all.h`. They are almost not used by this minimal implementation though.
-
-The hooks used with frida are at `frida-hooks.js`, but it's mostly a playground - some useful functions got deleted once I understood the protocol.
-
-There's also a partial Wireshark dissector at `dissector.lua`. You can install it with `make install-wireshark-dissector`.
 
 ## Running
 To execute the HTTP server, run `make run`; you can access the JPEG stream at http://localhost:1234/ and a file `audio.pcm` will be created.
@@ -124,6 +114,37 @@ ip address: 127.0.0.1
 gw address: 127.0.0.1
 net mask  : 255.0.0.0   
 ```
+
+## Spyware
+
+When connecting the camera to a network, it tries to send a HELLO (?) to 3 IP addresses:
+```
+139.155.68.77 - Shenzhen Tencent Computer Systems Company Limited 
+119.45.114.92 - Shenzhen Tencent Computer Systems Company Limited
+162.62.63.154 - Tencent Building, Kejizhongyi Avenue
+```
+
+With the payload
+```
+0000   f1 10 00 28 42 41 54 43 00 00 00 00 00 09 4d 2c   ...(BATC......M,
+0010   48 56 44 43 53 00 00 00 08 00 02 01 00 00 6c 7d   HVDCS.........l}
+0020   65 28 a8 c0 00 00 00 00 00 00 00 00               e(..........
+```
+
+which is `DevLogin`
+
+Every 8-10s
+## Reversing
+
+The interesting implementation is in `libvdp.so`, part of the apk bundle.
+
+Protocol reversing was done with a combination of static analysis of the shared object with [Ghidra](https://ghidra-sre.org/) and dynamic analysis with [Frida](https://frida.re/docs/javascript-api/).
+
+The headers reversed with Ghidra are at `types/all.h`. They are almost not used by this minimal implementation though.
+
+The hooks used with frida are at `frida-hooks.js`, but it's mostly a playground - some useful functions got deleted once I understood the protocol.
+
+There's also a partial Wireshark dissector at `dissector.lua`. You can install it with `make install-wireshark-dissector`.
 
 ### Take APK from emulator/sacrificial device
 ```
