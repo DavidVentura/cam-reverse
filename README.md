@@ -80,7 +80,7 @@ sequenceDiagram
 
 ### Serial
 
-The A9 cameras have a TX/RX test points - connecting with UART at 921600 81N gives _read only_ access to some debug logs.
+The A9 cameras have a TX/RX test points - connecting with UART at 921600 8N1 gives _read only_ access to some debug logs.
 
 ### Discrepancies between cameras
 
