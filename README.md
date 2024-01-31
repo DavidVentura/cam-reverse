@@ -88,11 +88,7 @@ The A9 cameras have a TX/RX test points - connecting with UART at 921600 81N giv
 	- A9 reports '100%' strength
 	- X5 reports different strength values
 
-Seems like the A9 cameras brick themselves if you:
-1- Give them a bad wifi password
-2- Give them a good wifi password, with no internet
-
-Have not yet tried to give it internet access.
+I bricked two cameras by patching out part of the WiFi setup - unclear yet which commands.
 
 After bricking itself, it reports very broken configuration via serial:
 
