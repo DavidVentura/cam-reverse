@@ -1,15 +1,7 @@
 import { createSocket, RemoteInfo } from "node:dgram";
 import { create_P2pAlive, DevSerial } from "./impl.js";
 import { Commands, CommandsByValue } from "./datatypes.js";
-import {
-  handle_P2PAlive,
-  handle_PunchPkt,
-  handle_P2PRdy,
-  handle_Drw,
-  notImpl,
-  noop,
-  makePunchPkt,
-} from "./handlers.js";
+import { handle_P2PAlive, handle_P2PRdy, handle_Drw, notImpl, noop, makePunchPkt } from "./handlers.js";
 import { hexdump } from "./hexdump.js";
 import EventEmitter from "node:events";
 import { SendVideoResolution, SendStartVideo, SendWifiDetails } from "./impl.js";
@@ -127,7 +119,7 @@ const startVideoStream = (s: Session) => {
 };
 
 export const Handlers: Record<keyof typeof Commands, PacketHandler> = {
-  PunchPkt: handle_PunchPkt,
+  PunchPkt: notImpl,
   P2PAlive: handle_P2PAlive,
   P2pRdy: handle_P2PRdy,
   DrwAck: noop,
