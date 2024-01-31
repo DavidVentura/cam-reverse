@@ -2,23 +2,11 @@ import { RemoteInfo } from "node:dgram";
 import { createWriteStream } from "node:fs";
 import http from "node:http";
 
-import { CommandsByValue } from "./datatypes.js";
-import { hexdump } from "./hexdump.js";
 import { create_LanSearch, create_P2pAlive } from "./impl.js";
 import { Handlers, makeSession } from "./server.js";
 
 const s = makeSession(
-  (session, msg, rinfo, options) => {
-    const ab = new Uint8Array(msg).buffer;
-    const dv = new DataView(ab);
-    const cmd = CommandsByValue[dv.readU16()];
-    if (options.debug) {
-      console.log(`<< ${cmd}`);
-      console.log(hexdump(msg.buffer, { ansi: options.ansi, ansiColor: 1 }));
-    }
-    Handlers[cmd](session, dv, rinfo);
-    session.lastReceivedPacket = Date.now();
-  },
+  Handlers,
   (session) => {
     // ther should be a better way of executing periodic status update
     // requests per device
