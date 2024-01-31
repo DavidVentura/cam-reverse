@@ -1,7 +1,7 @@
 import { createWriteStream } from "node:fs";
 import http from "node:http";
 
-import { Handlers, makeSession } from "./server.js";
+import { Handlers, makeSession } from "./session.js";
 
 const s = makeSession(Handlers, { debug: false, ansi: false });
 const withAudio = false;

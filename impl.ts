@@ -3,7 +3,7 @@ import "./shim.ts";
 import { ccDest, Commands, ControlCommands } from "./datatypes.js";
 import { XqBytesEnc } from "./func_replacements.js";
 import { hexdump } from "./hexdump.js";
-import { Session } from "./server.js";
+import { Session } from "./session.js";
 import { u16_swap } from "./utils.js";
 
 const str2byte = (s: string): number[] => {
