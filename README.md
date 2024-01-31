@@ -12,6 +12,10 @@ To execute the HTTP server, run `make run`; you can access the JPEG stream at ht
 
 The roundtrip delay when using MJPEG is [~350ms](pics/delay.jpg?raw=true).
 
+There's a basic UI which can display multiple cameras:
+
+![](pics/web-ui.jpg?raw=true)
+
 ## Pairing a new camera
 
 Connect to the device's access point and run `SSID=<your ssid> PSK=<your password> make pair`.
