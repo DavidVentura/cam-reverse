@@ -45,6 +45,7 @@ export const makeSession = (
   handlers: Record<keyof typeof Commands, PacketHandler>,
   dev: DevSerial,
   ra: RemoteInfo,
+  onLogin: (s: Session) => void,
   options: opt,
 ): Session => {
   const sock = createSocket("udp4");
@@ -111,7 +112,13 @@ export const makeSession = (
   return session;
 };
 
-const startVideoStream = (s: Session) => {
+export const configureWifi = (ssid: string, password: string) => {
+  return (s: Session) => {
+    [SendWifiDetails(s, ssid, password, true)].forEach(s.send);
+  };
+};
+
+export const startVideoStream = (s: Session) => {
   [
     ...SendVideoResolution(s, 2), // 640x480
     SendStartVideo(s),

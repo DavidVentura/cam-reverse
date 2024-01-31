@@ -20,8 +20,6 @@ const handleIncomingPunch = (msg: Buffer, ee: EventEmitter, rinfo: RemoteInfo, o
 
 export const discoverDevices = (options: opt): EventEmitter => {
   const sock = createSocket("udp4");
-  //const BCAST_IP = "192.168.1.255";
-  const BCAST_IP = "192.168.40.101";
   const SEND_PORT = 32108;
   const ee = new EventEmitter();
 
@@ -39,9 +37,9 @@ export const discoverDevices = (options: opt): EventEmitter => {
     let buf = create_LanSearch();
     setInterval(() => {
       console.log(".");
-      sock.send(new Uint8Array(buf.buffer), SEND_PORT, BCAST_IP);
+      sock.send(new Uint8Array(buf.buffer), SEND_PORT, options.discovery_ip);
     }, 2000);
-    sock.send(new Uint8Array(buf.buffer), SEND_PORT, BCAST_IP);
+    sock.send(new Uint8Array(buf.buffer), SEND_PORT, options.discovery_ip);
   });
 
   sock.bind();
