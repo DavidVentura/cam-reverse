@@ -4,6 +4,7 @@ import { Commands, CommandsByValue } from "./datatypes.js";
 import { handle_P2PAlive, handle_PunchPkt, handle_P2PRdy, handle_Drw, notImpl, noop } from "./handlers.js";
 import { hexdump } from "./hexdump.js";
 import EventEmitter from "node:events";
+import { SendVideoResolution, SendStartVideo, SendWifiDetails } from "./impl.js";
 
 export type Session = {
   send: (msg: DataView) => void;
@@ -14,6 +15,7 @@ export type Session = {
   dst_ip: string;
   lastReceivedPacket: number;
   connected: boolean;
+  devName: string;
   timers: ReturnType<typeof setInterval>[];
 };
 
@@ -82,6 +84,7 @@ export const makeSession = (handlers: Record<keyof typeof Commands, PacketHandle
     eventEmitter: new EventEmitter(),
     connected: false,
     timers: [],
+    devName: "",
     send: (msg: DataView) => {
       const raw = msg.readU16();
       const cmd = CommandsByValue[raw];
@@ -90,9 +93,6 @@ export const makeSession = (handlers: Record<keyof typeof Commands, PacketHandle
         if (raw != Commands.P2PAlive) {
           console.log(hexdump(msg.buffer, { ansi: options.ansi, ansiColor: 0 }));
         }
-      }
-      if (raw == Commands.Drw) {
-        session.outgoingCommandId++;
       }
       sock.send(new Uint8Array(msg.buffer), SEND_PORT, session.dst_ip);
     },
@@ -115,6 +115,7 @@ export const makeSession = (handlers: Record<keyof typeof Commands, PacketHandle
     session.outgoingCommandId = 0;
     session.dst_ip = rinfo.address;
     session.connected = true;
+    session.devName = name;
 
     const int = setInterval(() => {
       const delta = Date.now() - session.lastReceivedPacket;
@@ -128,7 +129,19 @@ export const makeSession = (handlers: Record<keyof typeof Commands, PacketHandle
     }, 400);
     session.timers.push(int);
   });
+
+  session.eventEmitter.on("login", () => {
+    console.log(`Logged in - ${session.devName}`);
+    startVideoStream(session);
+  });
   return session;
+};
+
+const startVideoStream = (s: Session) => {
+  [
+    ...SendVideoResolution(s, 2), // 640x480
+    SendStartVideo(s),
+  ].forEach(s.send);
 };
 
 export const Handlers: Record<keyof typeof Commands, PacketHandler> = {

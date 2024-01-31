@@ -43,6 +43,7 @@ const makeDataReadWrite = (session: Session, command: number, data: DataView | n
     ret.add(20).writeByteArray(bufCopy);
   }
 
+  session.outgoingCommandId++;
   return ret;
 };
 
@@ -76,7 +77,7 @@ export const getVideoKey = (session: Session): void => {
   }
 };
 
-export const SendVideoResolution = (session: Session, resol: 1 | 2 | 3 | 4): null => {
+export const SendVideoResolution = (session: Session, resol: 1 | 2 | 3 | 4): DataView[] => {
   // seems like 0x1 = resolution, and is specified by ID not by size
   // unclear what 0x2-0xf achieve - they report back as '0' always -- ignored?
   const pairs = {
@@ -103,11 +104,10 @@ export const SendVideoResolution = (session: Session, resol: 1 | 2 | 3 | 4): nul
     // maybe the 0x7 = bitrate??
   };
 
-  pairs[resol].forEach((payload: number[]) => {
+  return pairs[resol].map((payload: number[]) => {
     const dv = new DataView(new Uint8Array(payload).buffer);
-    session.send(makeDataReadWrite(session, ControlCommands.VideoParamSet, dv));
+    return makeDataReadWrite(session, ControlCommands.VideoParamSet, dv);
   });
-  return null;
 };
 
 export const SendReboot = (session: Session): DataView => {

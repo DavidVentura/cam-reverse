@@ -3,16 +3,7 @@ import { RemoteInfo } from "node:dgram";
 import { Commands, CommandsByValue, ControlCommands } from "./datatypes.js";
 import { XqBytesDec } from "./func_replacements.js";
 import { hexdump } from "./hexdump.js";
-import {
-  create_P2pClose,
-  create_P2pRdy,
-  SendDevStatus,
-  SendListWifi,
-  SendReboot,
-  SendStartVideo,
-  SendUsrChk,
-  SendWifiSettings,
-} from "./impl.js";
+import { create_P2pRdy, SendListWifi, SendUsrChk } from "./impl.js";
 import { Session } from "./session.js";
 import { u16_swap, u32_swap } from "./utils.js";
 
@@ -53,14 +44,14 @@ export const handle_PunchPkt = (session: Session, dv: DataView, rinfo: RemoteInf
   session.send(create_P2pRdy(dv.add(4).readByteArray(len)));
 };
 
-export const createResponseForControlCommand = (session: Session, dv: DataView): DataView | undefined => {
+export const createResponseForControlCommand = (session: Session, dv: DataView): DataView[] => {
   const start_type = dv.add(8).readU16(); // 0xa11 on control; data starts here on DATA pkt
   const cmd_id = dv.add(10).readU16(); // 0x1120
   const payload_len = u16_swap(dv.add(0xc).readU16());
 
   if (start_type != 0x110a) {
     console.error(`Expected start_type to be 0xa11, got 0x${start_type.toString(16)}`);
-    return;
+    return [];
   }
   const rotate_chr = 4;
   if (payload_len > rotate_chr) {
@@ -73,11 +64,12 @@ export const createResponseForControlCommand = (session: Session, dv: DataView):
   if (cmd_id == ControlCommands.ConnectUserAck) {
     let c = new Uint8Array(dv.add(0x18).readByteArray(4).buffer);
     session.ticket = [...c];
-    const buf = SendStartVideo(session);
-    return buf;
+    session.eventEmitter.emit("login");
+    return [];
   }
 
   if (cmd_id == ControlCommands.DevStatusAck) {
+    // ParseDevStatus -> offset relevant?
     let charging = u32_swap(dv.add(0x28).readU32()) & 1; // 0x14000101 v 0x14000100
     let power = u16_swap(dv.add(0x18).readU16()); // '3730' or '3765', milliVolts?
     let dbm = dv.add(0x24).readU8() - 0x100; // 0xbf - 0x100 = -65dbm .. constant??
@@ -104,12 +96,7 @@ export const createResponseForControlCommand = (session: Session, dv: DataView):
     };
     const buf = SendListWifi(session);
     console.log(`Current wifi settings: ${JSON.stringify(wifiSettings, null, 2)}`);
-    setTimeout(() => {
-      console.log("send now??");
-      const buf = SendListWifi(session);
-      session.send(buf);
-    }, 8000);
-    return buf;
+    return [buf];
   }
 
   if (cmd_id == ControlCommands.ListWifiAck) {
@@ -138,6 +125,7 @@ export const createResponseForControlCommand = (session: Session, dv: DataView):
       items.push(wifiListItem);
     }
   }
+  return [];
 };
 
 let seq = 0;
@@ -184,7 +172,8 @@ const deal_with_data = (session: Session, dv: DataView) => {
         return;
       }
       if (pkt_id > seq + 1) {
-        // missed some packets -- filling with zeroes still produces a broken image
+        // missed some packets -- filling with zeroes still produces a broken
+        // image
         frame_is_bad = true;
         return;
       }
@@ -221,8 +210,6 @@ export const handle_Drw = (session: Session, dv: DataView) => {
     deal_with_data(session, dv);
   } else {
     const b = createResponseForControlCommand(session, dv);
-    if (b != undefined) {
-      session.send(b);
-    }
+    b.forEach(session.send);
   }
 };
