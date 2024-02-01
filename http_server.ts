@@ -10,8 +10,9 @@ import { ServerResponse } from "http";
 const opts = {
   debug: false,
   ansi: false,
-  discovery_ip: "192.168.40.255", //, "192.168.1.255"
-  // discovery_ip: "192.168.40.101",
+  // discovery_ip: "192.168.40.255", //, "192.168.1.255"
+  discovery_ip: "192.168.40.101",
+  attempt_to_fix_packet_loss: false,
 };
 
 let BOUNDARY = "a very good boundary line";

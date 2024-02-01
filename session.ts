@@ -20,6 +20,7 @@ export type Session = {
   curImage: Buffer[];
   rcvSeqId: number;
   frame_is_bad: boolean;
+  frame_was_fixed: boolean;
   options: opt;
 };
 
@@ -101,6 +102,7 @@ export const makeSession = (
     curImage: [],
     rcvSeqId: 0,
     frame_is_bad: false,
+    frame_was_fixed: false,
     options: options,
   };
 

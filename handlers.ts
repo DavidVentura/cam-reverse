@@ -152,6 +152,7 @@ const deal_with_data = (session: Session, dv: DataView) => {
         session.eventEmitter.emit("frame");
       }
 
+      session.frame_was_fixed = false;
       session.frame_is_bad = false;
       session.curImage = [Buffer.from(data.buffer)];
       session.rcvSeqId = pkt_id;
@@ -164,18 +165,54 @@ const deal_with_data = (session: Session, dv: DataView) => {
       let b = Buffer.from(data.buffer);
 
       if (pkt_id > session.rcvSeqId + 1) {
-        // missed some packets -- filling with zeroes still produces a broken
-        // image
         session.frame_is_bad = true;
-        console.log(`Missed some packets on ${session.devName} -- skipping a frame`);
-        return;
+        // this should always be enabled but currently it seems to cause more visual distortion
+        // than just missing some frames
+        if (!session.options.attempt_to_fix_packet_loss) {
+          return;
+        }
+
+        if (session.curImage.length == 1) return; // header does not have markers
+
+        let lastFrameSlice = session.curImage[session.curImage.length - 1];
+        const lastResetMarker = findAllResetMarkers(lastFrameSlice).pop();
+        if (lastResetMarker == undefined) {
+          // not storing rcvSeqId as this frame did not put us back in track
+          return;
+        }
+
+        const firstResetMarker = findAllResetMarkers(b).shift();
+        if (firstResetMarker == undefined) {
+          // not storing rcvSeqId as this frame did not put us back in track
+          return;
+        }
+
+        session.curImage[session.curImage.length - 1] = Buffer.from(lastFrameSlice.subarray(0, lastResetMarker));
+        b = Buffer.from(b.subarray(firstResetMarker));
+        session.frame_is_bad = false;
+        session.frame_was_fixed = true;
       }
+
       session.rcvSeqId = pkt_id;
       if (session.curImage != null) {
         session.curImage.push(b);
       }
     }
   }
+};
+
+const findAllResetMarkers = (b: Buffer): number[] => {
+  // a reset marker is a byte 0xff followed by a byte 0xd0-0xd7
+  let ret = [];
+  for (let i = 0; i < b.length - 1; i++) {
+    if (b[i] == 0xff) {
+      const nb = b[i + 1];
+      if (nb >= 0xd0 && nb <= 0xd7) {
+        ret.push(i);
+      }
+    }
+  }
+  return ret;
 };
 
 const makeDrwAck = (dv: DataView): DataView => {
