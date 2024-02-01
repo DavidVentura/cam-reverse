@@ -13,8 +13,13 @@ const opts = {
 let sessions: Record<string, Session> = {};
 
 let devEv = discoverDevices(opts);
+if (process.env.SSID == undefined || process.env.PSK == undefined) {
+  throw new Error("Set `SSID` and `PSK` environment variables");
+}
+
 const onLogin = configureWifi(process.env.SSID, process.env.PSK);
 
+console.log(process.env.SSID, process.env.PSK);
 devEv.on("discover", (rinfo: RemoteInfo, dev: DevSerial) => {
   if (dev.devId in sessions) {
     console.log(`ignoring ${dev.devId} - ${rinfo.address}`);
