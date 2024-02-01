@@ -149,6 +149,21 @@ Every 8-10s
 There are some other strings in the APK ending in `-$$` which decode to other ips/hostnames.
 
 
+## Other stuff
+
+These little cameras have quite some packet loss - I _tried_ to deal with it by splicing around it on the JPEG payloads, but it's probably wrong, I expected artifacts like this:
+
+![](pics/packet_loss_good.jpg?raw=true)
+
+but most of the time got:
+
+![](pics/packet_loss_bad.jpg?raw=true)
+
+which _moves_ the rest of the image, causing more visual noise.
+
+For now, images on which there was packet loss get skipped. The algorithm to "fix" packet loss can be enabled as an option.
+
+
 ## Reversing
 
 The interesting implementation is in `libvdp.so`, part of the apk bundle.
