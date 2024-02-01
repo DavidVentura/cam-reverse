@@ -4,12 +4,24 @@ import { placeholderTypes, sprintf, u16_swap } from "./utils.js";
 
 const hook_fn = (name_in_elf, enter, leave) => {
   var symbol_addr = DebugSymbol.fromName(name_in_elf).address;
-  console.log(`${name_in_elf} addr is: ${symbol_addr}, this is ${this}`);
+  console.log(`${name_in_elf} addr is: ${symbol_addr}`);
   Interceptor.attach(symbol_addr, {
     onEnter: enter,
     onLeave: leave,
   });
   console.log(`Hooked ${name_in_elf}`);
+};
+
+const global = (name_in_elf) => {
+  //var symbol_addr = DebugSymbol.fromName(name_in_elf).address;
+  // Module.enumerateSections("libvdp.so").forEach((s) => console.log(JSON.stringify(s, null, 2)));
+  //   "name": ".bss",
+  //Module.enumerateSymbols("libvdp.so").forEach((s) => console.log(JSON.stringify(s, null, 2)));
+  const syms = Module.enumerateSymbols("libvdp.so").filter((s) => s.name == name_in_elf);
+  var symbol_addr = syms[0].address;
+  console.log(`global ${name_in_elf} addr is: ${symbol_addr}`);
+  if (symbol_addr == 0x0 || symbol_addr == null) throw new Error(`can't read ${name_in_elf}`);
+  return new NativePointer(symbol_addr);
 };
 
 function hook_export_fn(name_in_elf, enter, leave) {
@@ -119,6 +131,74 @@ const hook___android_log_print = () => {
 };
 
 const hook_udpsend = () => {
+  const codeTable = global("codeTable");
+  /*
+	 * WanAddrGet
+139.155.68.77
+P2PLIB = p2pCommon/XQPPP_Socket.c, line 846, XQ_WanAddrGet:ipv4   cAddr=139.155.68.77
+WanAddrGet
+119.45.114.92
+P2PLIB = p2pCommon/XQPPP_Socket.c, line 846, XQ_WanAddrGet:ipv4   cAddr=119.45.114.92
+WanAddrGet
+162.62.63.154
+P2PLIB = p2pCommon/XQPPP_Socket.c, line 846, XQ_WanAddrGet:ipv4   cAddr=162.62.63.154
+WanAddrGet
+3.132.215.40
+*/
+  let x = {};
+  hook_fn(
+    "XQ_WanAddrGet",
+    (args) => {
+      console.log("WanAddrGet");
+      console.log(args[0].readCString());
+      x.ret = args[2];
+    },
+    (retval) => {
+      console.log("WanAddrGet RET");
+      console.log(x.ret.readCString());
+      //console.log("on wanaddrget, ret");
+      //console.log(hexdump(codeTable.readByteArray(0x548)));
+    },
+  );
+
+  let d = {};
+  hook_fn(
+    "XqStrDec",
+    (args) => {
+      console.log("XqStrDec param1", args[0].readCString());
+      console.log("codetable", codeTable.readCString());
+      console.log("codetable hexarr\n", hexdump(codeTable.readByteArray(0x548)));
+    },
+    (retval) => {
+      console.log("XqStrDec RET");
+      console.log(retval.readCString());
+      //console.log("on wanaddrget, ret");
+      //console.log(hexdump(codeTable.readByteArray(0x548)));
+    },
+  );
+  hook_fn(
+    "XqCodeTableInit",
+    (args) => {
+      console.log("on codetableinit, it was");
+      console.log(hexdump(codeTable.readByteArray(0x548)));
+    },
+    (retval) => {
+      console.log("on codetableinit, ret");
+      console.log(hexdump(codeTable.readByteArray(0x548)));
+    },
+  );
+  hook_fn(
+    "XQ_InitEncryption",
+    (args) => {
+      console.log("on initenc, it was");
+      console.log(hexdump(codeTable.readByteArray(0x548)));
+    },
+    (retval) => {
+      console.log("on initenc, ret");
+      console.log(hexdump(codeTable.readByteArray(0x548)));
+    },
+  );
+
   hook_fn(
     "XQ_UdpPktSend",
     (args) => {
@@ -177,6 +257,7 @@ const hook_udpsend = () => {
     },
   );
 
+  /*
   let s = {};
   hook_fn(
     "PktSeq_seqGet",
@@ -189,6 +270,7 @@ const hook_udpsend = () => {
       console.log(data);
     },
   );
+	*/
 
   /*
   hook_fn(
@@ -294,7 +376,7 @@ function doHooks() {
     // hook_in_out_buf("create_LstReq", 0x1c, 0x1c);
     //hook_in_out_buf("create_P2pRdy", 0x1c, 0x1c);
     hook_udpsend();
-    doReplaceFunctions();
+    //doReplaceFunctions();
 
     // hook_p2p_read();
     // hook_pack_P2pId();
