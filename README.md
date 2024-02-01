@@ -122,11 +122,12 @@ net mask  : 255.0.0.0
 
 ## Spyware
 
-When connecting the camera to a network, it tries to send a HELLO (?) to 3 IP addresses:
+When connecting the camera to a network, it tries to send a HELLO (?) to 4 IP addresses:
 ```
 139.155.68.77 - Shenzhen Tencent Computer Systems Company Limited 
 119.45.114.92 - Shenzhen Tencent Computer Systems Company Limited
 162.62.63.154 - Tencent Building, Kejizhongyi Avenue
+3.132.215.40 - ec2-3-132-215-40.us-east-2.compute.amazonaws.com
 ```
 
 With the payload
@@ -138,7 +139,14 @@ With the payload
 
 which is `DevLogin`
 
+
+These addresses are decoded (script at `scripts/dec_svr.py`) from the string `SWPNPDPFLVAOLNSXPHSQPIEOPAIDENLXHXEHIFLKPGLRHUARSTLQEEEPSUIHPDLSPEAOICLOSQEMLPPALNIBIAERHZLKHXEJHYHUEIEHELEEEKEG`.
+
 Every 8-10s
+
+There are some other strings in the APK ending in `-$$` which decode to other ips/hostnames.
+
+
 ## Reversing
 
 The interesting implementation is in `libvdp.so`, part of the apk bundle.
