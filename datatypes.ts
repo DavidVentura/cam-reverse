@@ -50,6 +50,7 @@ export const ControlCommands = {
   Reboot: 0x1110, //CMD_SYSTEM_REBOOT,
   VideoParamSet: 0x1830, // CMD_PEER_VIDEOPARAM_SET
   VideoParamGet: 0x1930, // CMD_PEER_VIDEOPARAM_GET
+  IRToggle: 0x0a30, // CMD_PEER_IRCUT_ONOFF
 };
 
 export const ccDest: Record<number, number> = {
