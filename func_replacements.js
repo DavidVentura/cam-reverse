@@ -207,16 +207,26 @@ const dbg_create_Drw = (og_func) => {
 };
 const dbg__ZN12CPPPPChannel10CmdSndPushEiiPci = (og_func) => {
   const CmdSndPush = (_this, dest, cmdtype, idk, cmdlen) => {
-    console.log("CmdSndPush", _this, dest.toString(16), cmdtype.toString(16), idk, cmdlen);
+    console.log("CmdSndPushPre", _this, dest.toString(16), cmdtype.toString(16), idk, cmdlen);
     // CmdSndPush 0x1020 ret: 172
     // CmdSndPush 0x1040 ret: 92
     // CmdSndPush 0x50ff ret: 564
     // CmdSndPush 0x1008 ret: 12
     //
-    if (cmdtype == 0x1040) return 92; // mask
-    if (cmdtype == 0x1020) return 172; // mask
-    if (cmdtype == 0x50ff) return 564; // mask
-    // if (cmdtype == 0x1008) return 12; // battery
+    //if (cmdtype == 0x1020) return 172; // login
+
+    // maybe these brick it
+    //if (cmdtype == 0x1040) return 92; // mask
+    //if (cmdtype == 0x50ff) return 564; // mask
+    //if (cmdtype == 0x1008) return 12; // battery + status online?
+    //// new
+    ////if (cmdtype == 0x6003) return 12; // wifilist
+    //if (cmdtype == 0x6002) return 12; // wifisettings
+    //if (cmdtype == 0x1031) return 44; // "open settings panel" ??
+    //if (cmdtype == 0x1032) return 12; //idk
+
+    //// mb reboot
+    //if (cmdtype == 0x2005) return 20; //idk
 
     let ret = og_func(_this, dest, cmdtype, idk, cmdlen);
     console.log(`CmdSndPush 0x${cmdtype.toString(16)} ret: ${ret}`);
@@ -225,19 +235,23 @@ const dbg__ZN12CPPPPChannel10CmdSndPushEiiPci = (og_func) => {
   return CmdSndPush;
 };
 
+const dbg__Z6NetCmdP7_JNIEnvPciiP8_jobject = (og_func) => {
+  // "pointer", "pointer", "uint32", "uint32", "pointer"
+  const NetCmd = (java_class, p2pid, sit, cmd, java_param) => {
+    console.log("NetCmd", java_class, p2pid.readCString(), sit, cmd.toString(16), java_param);
+    // if (cmd == 0x0000) return 0;
+    let ret = og_func(java_class, p2pid, sit, cmd, java_param);
+    console.log(`NetCmd 0x${cmd.toString(16)} ret: ${ret}`);
+    return ret;
+  };
+  return NetCmd;
+};
+
 const dbg__Z9SystemCmdP7_JNIEnvPciiP8_jobject = (og_func) => {
   // "pointer", "pointer", "uint32", "uint32", "pointer"
   const SystemCmd = (java_class, p2pid, sit, cmd, java_param) => {
     console.log("SystemCmd", java_class, p2pid.readCString(), sit, cmd.toString(16), java_param);
-    if (cmd == 0x3018) return 20; // mask
-    if (cmd == 0x3019) return 12; // mask
-    if (cmd == 0x3005) return 12; // mask
-    if (cmd == 0x3026) return 0; // mask
-    if (cmd == 0x3001) return 12;
-    if (cmd == 0x3003) return 12;
 
-    // if (cmd == 0x3011) return 272; // this is STOP !!
-    // if (cmd == 0x3010) return 272; // borks
     let ret = og_func(java_class, p2pid, sit, cmd, java_param);
     console.log(`SystemCmd 0x${cmd.toString(16)} ret: ${ret}`);
     return ret;
@@ -248,12 +262,6 @@ const dbg__Z5AvCmdP7_JNIEnvPciiP8_jobject = (og_func) => {
   // "pointer", "pointer", "uint32", "uint32", "pointer"
   const AvCmd = (java_class, p2pid, sit, cmd, java_param) => {
     console.log("AvCmd", java_class, p2pid.readCString(), sit, cmd.toString(16), java_param);
-    if (cmd == 0x3018) return 20; // mask
-    if (cmd == 0x3019) return 12; // mask
-    if (cmd == 0x3005) return 12; // mask
-    if (cmd == 0x3026) return 0; // mask
-    if (cmd == 0x3001) return 12;
-    if (cmd == 0x3003) return 12;
 
     // if (cmd == 0x3011) return 272; // this is STOP !!
     // if (cmd == 0x3010) return 272; // borks
@@ -379,6 +387,7 @@ const replace_func = (stub, ret, args) => {
 // CSession_CtrlPkt_Proc(struct, *cmd) == control?
 export const replaceFunctions = () => {
   const replacements = [
+    /*
     [create_P2pAlive, "uint8", ["pointer"]],
     [create_P2pAliveAck, "uint8", ["pointer"]],
     [create_LanSearch, "uint8", ["pointer"]],
@@ -398,6 +407,8 @@ export const replaceFunctions = () => {
     [dbg_pack_ClntPkt, "uint32", ["uint32", "pointer", "pointer"]],
     [dbg__Z5AvCmdP7_JNIEnvPciiP8_jobject, "uint32", ["pointer", "pointer", "uint32", "uint32", "pointer"]],
     [dbg__Z9SystemCmdP7_JNIEnvPciiP8_jobject, "uint32", ["pointer", "pointer", "uint32", "uint32", "pointer"]],
+	  */
+    [dbg__Z6NetCmdP7_JNIEnvPciiP8_jobject, "uint32", ["pointer", "pointer", "uint32", "uint32", "pointer"]],
     [dbg__ZN12CPPPPChannel10CmdSndPushEiiPci, "uint64", ["pointer", "uint32", "uint32", "pointer", "uint32"]],
   ];
 
