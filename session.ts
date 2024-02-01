@@ -17,9 +17,10 @@ export type Session = {
   connected: boolean;
   devName: string;
   timers: ReturnType<typeof setInterval>[];
-  curImage: Buffer | null;
+  curImage: Buffer[];
   rcvSeqId: number;
   frame_is_bad: boolean;
+  options: opt;
 };
 
 export type PacketHandler = (session: Session, dv: DataView, rinfo: RemoteInfo) => void;
@@ -29,16 +30,15 @@ type msgCb = (
   handlers: Record<keyof typeof Commands, PacketHandler>,
   msg: Buffer,
   rinfo: RemoteInfo,
-  options: opt,
 ) => void;
 
-const handleIncoming: msgCb = (session, handlers, msg, rinfo, options) => {
+const handleIncoming: msgCb = (session, handlers, msg, rinfo) => {
   const ab = new Uint8Array(msg).buffer;
   const dv = new DataView(ab);
   const cmd = CommandsByValue[dv.readU16()];
-  if (options.debug) {
+  if (session.options.debug) {
     console.log(`<< ${cmd}`);
-    console.log(hexdump(msg.buffer, { ansi: options.ansi, ansiColor: 1 }));
+    console.log(hexdump(msg.buffer, { ansi: session.options.ansi, ansiColor: 1 }));
   }
   handlers[cmd](session, dv, rinfo);
   session.lastReceivedPacket = Date.now();
@@ -58,7 +58,7 @@ export const makeSession = (
     sock.close();
   });
 
-  sock.on("message", (msg, rinfo) => handleIncoming(session, handlers, msg, rinfo, options));
+  sock.on("message", (msg, rinfo) => handleIncoming(session, handlers, msg, rinfo));
 
   sock.on("listening", () => {
     const buf = makePunchPkt(dev);
@@ -98,9 +98,10 @@ export const makeSession = (
       sock.send(new Uint8Array(msg.buffer), SEND_PORT, session.dst_ip);
     },
     dst_ip: ra.address,
-    curImage: null,
+    curImage: [],
     rcvSeqId: 0,
     frame_is_bad: false,
+    options: options,
   };
 
   session.eventEmitter.on("disconnect", () => {

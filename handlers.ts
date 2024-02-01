@@ -148,21 +148,21 @@ const deal_with_data = (session: Session, dv: DataView) => {
   } else {
     const data = dv.add(8).readByteArray(pkt_len - 4);
     if (is_new_image) {
-      if (session.curImage != null && !session.frame_is_bad) {
+      if (session.curImage.length > 0 && !session.frame_is_bad) {
         session.eventEmitter.emit("frame");
       }
 
       session.frame_is_bad = false;
-      session.curImage = Buffer.from(data.buffer);
+      session.curImage = [Buffer.from(data.buffer)];
       session.rcvSeqId = pkt_id;
     } else {
       if (pkt_id <= session.rcvSeqId) {
         // retransmit
         return;
       }
-      if (session.frame_is_bad) {
-        return;
-      }
+
+      let b = Buffer.from(data.buffer);
+
       if (pkt_id > session.rcvSeqId + 1) {
         // missed some packets -- filling with zeroes still produces a broken
         // image
@@ -172,7 +172,7 @@ const deal_with_data = (session: Session, dv: DataView) => {
       }
       session.rcvSeqId = pkt_id;
       if (session.curImage != null) {
-        session.curImage = Buffer.concat([session.curImage, Buffer.from(data.buffer)]);
+        session.curImage.push(b);
       }
     }
   }

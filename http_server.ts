@@ -63,9 +63,11 @@ devEv.on("discover", (rinfo: RemoteInfo, dev: DevSerial) => {
   const header = Buffer.from(`--${BOUNDARY}\r\nContent-Type: image/jpeg\r\n\r\n`);
 
   s.eventEmitter.on("frame", () => {
+    const assembled = Buffer.concat(s.curImage);
+
     responses[dev.devId].forEach((res) => {
       res.write(header);
-      res.write(s.curImage);
+      res.write(assembled);
     });
   });
 
