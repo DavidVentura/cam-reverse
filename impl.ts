@@ -63,6 +63,10 @@ export const SendListWifi = (session: Session): DataView => {
   return makeDataReadWrite(session, ControlCommands.ListWifi, null);
 };
 
+export const SendStopVideo = (session: Session): DataView => {
+  return makeDataReadWrite(session, ControlCommands.StopVideo, null);
+};
+
 export const SendStartVideo = (session: Session): DataView => {
   return makeDataReadWrite(session, ControlCommands.StartVideo, null);
 };

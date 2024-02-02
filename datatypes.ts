@@ -46,6 +46,7 @@ export const ControlCommands = {
   ListWifi: 0x0360, // CMD_NET_WIFI_SCAN
   ListWifiAck: 0x0361,
   StartVideo: 0x1030, // CMD_PEER_LIVEVIDEO_START
+  StopVideo: 0x1130, // CMD_PEER_LIVEVIDEO_STOP
   Shutdown: 0x1010, //CMD_SYSTEM_SHUTDOWN,
   Reboot: 0x1110, //CMD_SYSTEM_REBOOT,
   VideoParamSet: 0x1830, // CMD_PEER_VIDEOPARAM_SET
