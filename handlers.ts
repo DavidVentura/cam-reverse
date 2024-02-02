@@ -140,8 +140,12 @@ const deal_with_data = (session: Session, dv: DataView) => {
     // "stream_head_t->type == 0x06" per pdf
     if (dv.add(12).readU8() == 0x06) {
       const audio_len = u16_swap(dv.add(8 + 16).readU16());
+      // may have received the next 'data' packet id as an audio frame -- jpeg was fine
+      if (pkt_id == session.rcvSeqId + 1) {
+        session.rcvSeqId = session.rcvSeqId + 1;
+      }
       const audio_buf = dv.add(32 + 8).readByteArray(audio_len).buffer; // 8 for pkt header, 32 for `stream_head_t`
-      session.eventEmitter.emit("audio", Buffer.from(audio_buf));
+      session.eventEmitter.emit("audio", { gap: false, data: Buffer.from(audio_buf) });
     } else {
       // not sure what these are for, there's one per frame. maybe alignment?
     }
