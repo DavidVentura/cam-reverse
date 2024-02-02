@@ -18,6 +18,8 @@ There's a basic UI which can display multiple cameras:
 
 The server will send a broadcast packet every few seconds to discover all the cameras available; this means that it *must* run in the same broadcast domain (VLAN) as your cameras.
 
+Clicking on the image will take you to a page that has audio streaming enabled.
+
 ## Pairing a new camera
 
 Connect to the device's access point and run `SSID=<your ssid> PSK=<your password> make pair`.

@@ -1,5 +1,5 @@
 import { RemoteInfo } from "dgram";
-import { createWriteStream } from "node:fs";
+import { readFileSync } from "node:fs";
 import http from "node:http";
 
 import { discoverDevices } from "./discovery.js";
@@ -11,15 +11,52 @@ const opts = {
   debug: false,
   ansi: false,
   // discovery_ip: "192.168.40.255", //, "192.168.1.255"
-  discovery_ip: "192.168.40.101",
+  discovery_ip: "192.168.40.104",
   attempt_to_fix_packet_loss: false,
+  //attempt_to_fix_packet_loss: true,
 };
 
 let BOUNDARY = "a very good boundary line";
 let responses: Record<string, ServerResponse[]> = {};
+let audioResponses: Record<string, ServerResponse[]> = {};
 let sessions: Record<string, Session> = {};
 
 const server = http.createServer((req, res) => {
+  if (req.url.startsWith("/ui/")) {
+    let devId = req.url.split("/")[2];
+    let s = sessions[devId];
+    if (s === undefined) {
+      res.writeHead(400);
+      res.end("invalid ID");
+      return;
+    }
+    if (!s.connected) {
+      res.writeHead(400);
+      res.end("Nothing online");
+      return;
+    }
+    const ui = readFileSync("asd.html").toString();
+    res.end(ui.replace(/\${id}/g, devId));
+    return;
+  }
+  if (req.url.startsWith("/audio/")) {
+    let devId = req.url.split("/")[2];
+    let s = sessions[devId];
+    if (s === undefined) {
+      res.writeHead(400);
+      res.end("invalid ID");
+      return;
+    }
+    if (!s.connected) {
+      res.writeHead(400);
+      res.end("Nothing online");
+      return;
+    }
+    res.setHeader("Content-Type", `text/event-stream`);
+    audioResponses[devId].push(res);
+    return;
+  }
+
   if (req.url.startsWith("/camera/")) {
     let devId = req.url.split("/")[2];
     console.log("requested for", devId);
@@ -35,6 +72,7 @@ const server = http.createServer((req, res) => {
       res.end("Nothing online");
       return;
     }
+
     res.setHeader("Content-Type", `multipart/x-mixed-replace; boundary="${BOUNDARY}"`);
     responses[devId].push(res);
     res.on("close", () => {
@@ -43,7 +81,9 @@ const server = http.createServer((req, res) => {
     });
   } else {
     res.write(`<html>`);
-    Object.keys(sessions).forEach((id) => res.write(`<a href="/camera/${id}"><img src="/camera/${id}"/></a><hr/>`));
+    Object.keys(sessions).forEach((id) =>
+      res.write(`<h2>${id}</h2><a href="/ui/${id}"><img src="/camera/${id}"/></a><hr/>`),
+    );
     res.write(`</html>`);
     res.end();
   }
@@ -58,9 +98,10 @@ devEv.on("discover", (rinfo: RemoteInfo, dev: DevSerial) => {
 
   console.log(`discovered ${dev.devId} - ${rinfo.address}`);
   responses[dev.devId] = [];
+  audioResponses[dev.devId] = [];
   const s = makeSession(Handlers, dev, rinfo, startVideoStream, opts);
 
-  const withAudio = false;
+  const withAudio = true;
   const header = Buffer.from(`--${BOUNDARY}\r\nContent-Type: image/jpeg\r\n\r\n`);
 
   s.eventEmitter.on("frame", () => {
@@ -77,9 +118,14 @@ devEv.on("discover", (rinfo: RemoteInfo, dev: DevSerial) => {
     delete sessions[dev.devId];
   });
   if (withAudio) {
-    const audioFd = createWriteStream(`audio.pcm`);
-    s.eventEmitter.on("audio", (frame: Buffer) => {
-      audioFd.write(frame);
+    s.eventEmitter.on("audio", ({ gap, data }) => {
+      // ew, maybe WS?
+      var b64encoded = Buffer.from(data).toString("base64");
+      audioResponses[dev.devId].forEach((res) => {
+        res.write("data: ");
+        res.write(b64encoded);
+        res.write("\n\n");
+      });
     });
   }
   sessions[dev.devId] = s;
