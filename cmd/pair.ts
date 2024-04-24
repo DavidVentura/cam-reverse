@@ -8,6 +8,7 @@ const opts = {
   debug: true,
   ansi: true,
   discovery_ip: "192.168.1.255",
+  attempt_to_fix_packet_loss: false,
 };
 
 let sessions: Record<string, Session> = {};
