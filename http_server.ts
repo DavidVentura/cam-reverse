@@ -11,7 +11,8 @@ const opts = {
   debug: false,
   ansi: false,
   // discovery_ip: "192.168.40.255", //, "192.168.1.255"
-  discovery_ip: "192.168.40.104",
+  // discovery_ip: "192.168.40.104",
+  discovery_ip: "192.168.1.255",
   attempt_to_fix_packet_loss: false,
   //attempt_to_fix_packet_loss: true,
 };
