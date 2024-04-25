@@ -10,13 +10,14 @@ venv: requirements.txt
 
 build: node_modules
 	./node_modules/.bin/tsc
+	./node_modules/.bin/esbuild cmd/bin.ts  --bundle --platform=node --format=esm --outdir=dist
 	tar czf build.tar.gz build package.json
 
 run: node_modules
-	./node_modules/.bin/ts-node --esm http_server.ts
+	./node_modules/.bin/ts-node --esm cmd/bin http_server --port=1234
 
 pair: node_modules
-	./node_modules/.bin/ts-node --esm cmd/pair.ts
+	./node_modules/.bin/ts-node --esm cmd/bin pair
 
 hook: bundle.js venv
 	./venv/bin/python3 -u loader3.py
