@@ -8,7 +8,23 @@ Per pictures of the [X5](https://github.com/DavidVentura/cam-reverse/blob/master
 
 
 ## Running
-To execute the HTTP server, run `make run`; you can access the JPEG stream at http://localhost:1234/ and a file `audio.pcm` will be created.
+To execute the HTTP server, run `node bin.cjs`; you can access the JPEG stream at http://localhost:5000/ and (optionally) a file `audio.pcm` will be created.
+
+```bash
+$ node dist/bin.cjs http_server --help
+
+start http server
+
+Options:
+  --help                        Show help                              [boolean]
+  --version                     Show version number                    [boolean]
+  --debug                                             [boolean] [default: false]
+  --ansi                                              [boolean] [default: false]
+  --audio                                             [boolean] [default: false]
+  --discovery_ip                                      [default: "192.168.1.255"]
+  --attempt_to_fix_packet_loss                                  [default: false]
+  --port                        HTTP Port to listen on  [number] [default: 5000]
+```
 
 The roundtrip delay when using MJPEG is [~350ms](pics/delay.jpg?raw=true).
 
@@ -22,7 +38,22 @@ Clicking on the image will take you to a page that has audio streaming enabled.
 
 ## Pairing a new camera
 
-Connect to the device's access point and run `SSID=<your ssid> PSK=<your password> make pair`.
+Connect to the device's access point and run `node bin.cjs pair --ssid <SSID> --password <PASSWORD>`.
+```bash
+$ node dist/bin.cjs pair --help
+
+configure a camera
+
+Options:
+  --help                        Show help                              [boolean]
+  --version                     Show version number                    [boolean]
+  --debug                                             [boolean] [default: false]
+  --ansi                                              [boolean] [default: false]
+  --discovery_ip                                      [default: "192.168.1.255"]
+  --attempt_to_fix_packet_loss                                  [default: false]
+  --ssid                                                     [string] [required]
+  --password                                                 [string] [required]
+```
 
 ## Protocol
 

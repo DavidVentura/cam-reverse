@@ -10,7 +10,7 @@ venv: requirements.txt
 
 build: node_modules
 	./node_modules/.bin/tsc
-	./node_modules/.bin/esbuild cmd/bin.ts  --bundle --platform=node --format=esm --outdir=dist
+	./node_modules/.bin/esbuild cmd/bin.ts  --bundle --platform=node --outfile=dist/bin.cjs --target=node12
 	tar czf build.tar.gz build package.json
 
 run: node_modules

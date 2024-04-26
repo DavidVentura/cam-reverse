@@ -2,3 +2,4 @@ bundle.js
 venv
 node_modules
 build
+dist/
