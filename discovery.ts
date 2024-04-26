@@ -34,7 +34,7 @@ export const discoverDevices = (debug: boolean, discovery_ip: string): EventEmit
 
     let buf = create_LanSearch();
     setInterval(() => {
-      console.log(".");
+      process.stdout.write(".");
       sock.send(new Uint8Array(buf.buffer), SEND_PORT, discovery_ip);
     }, 2000);
     sock.send(new Uint8Array(buf.buffer), SEND_PORT, discovery_ip);
