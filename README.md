@@ -6,9 +6,35 @@ Re-implementation of the "iLnk"/"iLnkP2P"/"PPPP" protocol used on some cheap (\<
 
 Per pictures of the [X5](https://github.com/DavidVentura/cam-reverse/blob/master/pics/pcb.jpg?raw=true), [A9](https://github.com/DavidVentura/cam-reverse/blob/master/pics/pcb_a9.jpg?raw=true) the main chip is TXW817 ([chinese](https://www.taixin-semi.com/Product/ProductDetail?productId=306), [eng, google translate](https://www-taixin--semi-com.translate.goog/Product/ProductDetail?productId=306&_x_tr_sl=auto&_x_tr_tl=en&_x_tr_hl=en&_x_tr_pto=wapp))
 
+## Building
+
+Simply run `make build` to build the binaries.
+
+## Pairing a new camera
+
+Ensure your device in access point mode (the blue LED blinks slowly to indicate that); optionally, press the MODE button for 5s to switch to access point mode.
+
+Connect to the device's access point (e.g., FTYC811847AGFDZ) and run `node dist/bin.cjs pair --ssid <SSID> --password <PASSWORD>`.
+
+```bash
+$ node dist/bin.cjs pair --help
+
+configure a camera
+
+Options:
+  --help                        Show help                              [boolean]
+  --version                     Show version number                    [boolean]
+  --debug                                             [boolean] [default: false]
+  --ansi                                              [boolean] [default: false]
+  --discovery_ip                                      [default: "192.168.1.255"]
+  --attempt_to_fix_packet_loss                                  [default: false]
+  --ssid                                                     [string] [required]
+  --password                                                 [string] [required]
+```
 
 ## Running
-To execute the HTTP server, run `node bin.cjs`; you can access the JPEG stream at http://localhost:5000/ and (optionally) a file `audio.pcm` will be created.
+
+To execute the HTTP server, run `node dist/bin.cjs http_server`; you can access the JPEG stream at http://localhost:5000/ and (optionally) a file `audio.pcm` will be created.
 
 ```bash
 $ node dist/bin.cjs http_server --help
@@ -35,25 +61,6 @@ There's a basic UI which can display multiple cameras:
 The server will send a broadcast packet every few seconds to discover all the cameras available; this means that it *must* run in the same broadcast domain (VLAN) as your cameras.
 
 Clicking on the image will take you to a page that has audio streaming enabled.
-
-## Pairing a new camera
-
-Connect to the device's access point and run `node bin.cjs pair --ssid <SSID> --password <PASSWORD>`.
-```bash
-$ node dist/bin.cjs pair --help
-
-configure a camera
-
-Options:
-  --help                        Show help                              [boolean]
-  --version                     Show version number                    [boolean]
-  --debug                                             [boolean] [default: false]
-  --ansi                                              [boolean] [default: false]
-  --discovery_ip                                      [default: "192.168.1.255"]
-  --attempt_to_fix_packet_loss                                  [default: false]
-  --ssid                                                     [string] [required]
-  --password                                                 [string] [required]
-```
 
 ## Protocol
 
