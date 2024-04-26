@@ -15,9 +15,6 @@ build: node_modules
 run: node_modules
 	./node_modules/.bin/ts-node --esm cmd/bin http_server --port=1234
 
-pair: node_modules
-	./node_modules/.bin/ts-node --esm cmd/bin pair
-
 hook: bundle.js venv
 	./venv/bin/python3 -u loader3.py
 
