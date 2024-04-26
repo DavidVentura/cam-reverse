@@ -20,7 +20,7 @@ export const pair = ({ opts, ssid, password }: { opts: opt; ssid: string; passwo
   }
 
   devEv.on("discover", (rinfo: RemoteInfo, dev: DevSerial) => {
-    if (dev.devId in sessions && sessions[dev.devId] != undefined) {
+    if (dev.devId in sessions) {
       console.log(`Camera ${dev.devId} at ${rinfo.address} already discovered, ignoring`);
       return;
     }
