@@ -1,7 +1,9 @@
 {
   "type": "module",
   "scripts": {
-    "test": "mocha tests"
+    "test": "mocha tests",
+    "tsc": "tsc",
+    "build": "esbuild cmd/bin.ts  --bundle --platform=node --outfile=dist/bin.cjs --target=node12"
   },
   "devDependencies": {
     "@types/yargs": "^17.0.32",

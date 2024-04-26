@@ -9,9 +9,8 @@ venv: requirements.txt
 	touch venv
 
 build: node_modules
-	./node_modules/.bin/tsc
-	./node_modules/.bin/esbuild cmd/bin.ts  --bundle --platform=node --outfile=dist/bin.cjs --target=node12
-	tar czf build.tar.gz build package.json
+	npm run tsc
+	npm run build
 
 run: node_modules
 	./node_modules/.bin/ts-node --esm cmd/bin http_server --port=1234
