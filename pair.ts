@@ -14,18 +14,23 @@ export const pair = ({ opts, ssid, password }: { opts: opt; ssid: string; passwo
     throw new Error("You must set a non-zero-length password");
   }
 
-  const onLogin = configureWifi(ssid, password);
+  const onLogin = (s: Session) => {
+    configureWifi(ssid, password);
+    console.log(`WiFi config for camera ${s.devName} is done`);
+  }
 
   devEv.on("discover", (rinfo: RemoteInfo, dev: DevSerial) => {
-    if (dev.devId in sessions) {
+    if (dev.devId in sessions && sessions[dev.devId] != undefined) {
+      console.log(`Camera ${dev.devId} at ${rinfo.address} already discovered, ignoring`);
       console.log(`ignoring ${dev.devId} - ${rinfo.address}`);
       return;
     }
-    console.log(`discovered ${dev.devId} - ${rinfo.address}`);
+    console.log(`Discovered camera ${dev.devId} at ${rinfo.address}`);
     const s = makeSession(Handlers, dev, rinfo, onLogin, opts);
 
     s.eventEmitter.on("disconnect", () => {
-      console.log("deleting from sessions");
+      console.log(`Camera ${dev.devId} disconnected`);
+      console.log("Press CONTROL+C if you're done setting up your cameras");
       delete sessions[dev.devId];
     });
     sessions[dev.devId] = s;
