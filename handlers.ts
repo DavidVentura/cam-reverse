@@ -5,10 +5,12 @@ import { create_P2pRdy, SendListWifi, SendUsrChk, DevSerial } from "./impl.js";
 import { Session } from "./session.js";
 import { u16_swap, u32_swap } from "./utils.js";
 
-export const notImpl = (_: Session, dv: DataView) => {
+export const notImpl = (session: Session, dv: DataView) => {
   const raw = dv.readU16();
   const cmd = CommandsByValue[raw];
-  console.log(`^^ ${cmd} (${raw.toString(16)}) and it's not implemented yet`);
+  if (session.options.debug) {
+    console.log(`^^ ${cmd} (${raw.toString(16)}) and it's not implemented yet`);
+  }
 };
 
 export const noop = (_: Session, __: DataView) => {};
@@ -51,8 +53,10 @@ export const createResponseForControlCommand = (session: Session, dv: DataView):
   if (payload_len > rotate_chr) {
     // 20 = 16 (header) + 4 (??)
     XqBytesDec(dv.add(20), payload_len - 4, rotate_chr);
-    console.log("Decrypted");
-    console.log(hexdump(dv));
+    if (session.options.debug) {
+      console.log("Decrypted");
+      console.log(hexdump(dv));
+    }
   }
 
   if (cmd_id == ControlCommands.ConnectUserAck) {
@@ -96,10 +100,14 @@ export const createResponseForControlCommand = (session: Session, dv: DataView):
   if (cmd_id == ControlCommands.ListWifiAck) {
     let startat = 0x10;
     let msg_len = 91;
-    console.log("payload len", payload_len);
+    if (session.options.debug) {
+      console.log("payload len", payload_len);
+    }
     let msg_count = (payload_len - 9) / msg_len;
     let remote_msg_count = dv.add(startat).readU32LE();
-    console.log("should get messages:", msg_count, "in payload: ", remote_msg_count);
+    if (session.options.debug) {
+      console.log("should get messages:", msg_count, "in payload: ", remote_msg_count);
+    }
     startat += 4;
     let items = [];
     for (let i = 0; i < msg_count; i++) {
@@ -115,7 +123,9 @@ export const createResponseForControlCommand = (session: Session, dv: DataView):
       };
       console.log(`Wifi Item: ${JSON.stringify(wifiListItem, null, 2)}`);
       startat += msg_len;
-      console.log("ended at", startat);
+      if (session.options.debug) {
+        console.log("ended at", startat);
+      }
       items.push(wifiListItem);
     }
   }
