@@ -1,17 +1,32 @@
 import { RemoteInfo } from "dgram";
-import { readFileSync } from "node:fs";
+import { readFileSync, existsSync } from "node:fs";
 import http from "node:http";
 
 import { opt } from "./options.js";
 import { discoverDevices } from "./discovery.js";
-import { DevSerial } from "./impl.js";
+import { DevSerial, SendDevStatus } from "./impl.js";
 import { Handlers, makeSession, Session, startVideoStream } from "./session.js";
 
-let BOUNDARY = "a very good boundary line";
-let responses: Record<string, http.ServerResponse[]> = {};
-let audioResponses: Record<string, http.ServerResponse[]> = {};
-let sessions: Record<string, Session> = {};
+const BOUNDARY = "a very good boundary line";
+const responses: Record<string, http.ServerResponse[]> = {};
+const audioResponses: Record<string, http.ServerResponse[]> = {};
+const sessions: Record<string, Session> = {};
 
+// Text file containing the mapping of camera names.
+const nameFile = "cameras.txt";
+
+// Reads the simple mapping of camera names from the text file.
+const cameraNames = Object.assign({},
+    ...(existsSync(nameFile) ? readFileSync(nameFile, "utf8") : "").toString()
+    .replace(/\r\n/g, "\n").split("\n")
+    .filter(l => !l.startsWith("#"))
+    .filter(l => l.trim() != "")
+    .map(l => { let kv = l.split("="); return ({ [kv[0]]: kv[1] }); }));
+
+// Returns the camera name (custom name, if it exists, otherwise its ID).
+const cameraName = (id: string): string => cameraNames[id] || id;
+
+// The HTTP server.
 export const serveHttp = (opts: opt, port: number, with_audio: boolean) => {
   const server = http.createServer((req, res) => {
     if (req.url.startsWith("/ui/")) {
@@ -28,7 +43,7 @@ export const serveHttp = (opts: opt, port: number, with_audio: boolean) => {
         return;
       }
       const ui = readFileSync("asd.html").toString();
-      res.end(ui.replace(/\${id}/g, devId));
+      res.end(ui.replace(/\${id}/g, devId).replace(/\${name}/g, cameraName(devId)));
       return;
     }
     if (req.url.startsWith("/audio/")) {
@@ -51,17 +66,17 @@ export const serveHttp = (opts: opt, port: number, with_audio: boolean) => {
 
     if (req.url.startsWith("/camera/")) {
       let devId = req.url.split("/")[2];
-      console.log("requested for", devId);
+      console.log(`Video stream requested for camera ${devId}`);
       let s = sessions[devId];
 
       if (s === undefined) {
         res.writeHead(400);
-        res.end("invalid ID");
+        res.end(`Camera ${devId} not discovered`);
         return;
       }
       if (!s.connected) {
         res.writeHead(400);
-        res.end("Nothing online");
+        res.end(`Camera ${devId} offline`);
         return;
       }
 
@@ -69,29 +84,40 @@ export const serveHttp = (opts: opt, port: number, with_audio: boolean) => {
       responses[devId].push(res);
       res.on("close", () => {
         responses[devId] = responses[devId].filter((r) => r !== res);
-        console.log("Conn closed, kicked");
+        console.log(`Camera ${devId} closed connection`);
       });
     } else {
-      res.write(`<html>`);
+      res.write("<html>");
+      res.write("<head><title>All cameras</title></head>");
+      res.write("<body>");
+      res.write("<h1>All cameras</h1><hr/>");
       Object.keys(sessions).forEach((id) =>
-        res.write(`<h2>${id}</h2><a href="/ui/${id}"><img src="/camera/${id}"/></a><hr/>`),
+        res.write(`<h2>${cameraName(id)}</h2><a href="/ui/${id}"><img src="/camera/${id}"/></a><hr/>`),
       );
-      res.write(`</html>`);
+      res.write("</body>");
+      res.write("</html>");
       res.end();
     }
   });
 
   let devEv = discoverDevices(opts.debug, opts.discovery_ip);
+
+  const startSession = (s: Session) => {
+    s.send(SendDevStatus(s));
+    startVideoStream(s);
+    console.log(`Camera ${s.devName} is now streaming`);
+  }
+
   devEv.on("discover", (rinfo: RemoteInfo, dev: DevSerial) => {
     if (dev.devId in sessions) {
-      console.log(`ignoring ${dev.devId} - ${rinfo.address}`);
+      console.log(`Camera ${dev.devId} at ${rinfo.address} already discovered, ignoring`);
       return;
     }
 
-    console.log(`discovered ${dev.devId} - ${rinfo.address}`);
+    console.log(`Discovered camera ${dev.devId} at ${rinfo.address}`);
     responses[dev.devId] = [];
     audioResponses[dev.devId] = [];
-    const s = makeSession(Handlers, dev, rinfo, startVideoStream, opts);
+    const s = makeSession(Handlers, dev, rinfo, startSession, opts);
 
     const header = Buffer.from(`--${BOUNDARY}\r\nContent-Type: image/jpeg\r\n\r\n`);
 
@@ -105,7 +131,7 @@ export const serveHttp = (opts: opt, port: number, with_audio: boolean) => {
     });
 
     s.eventEmitter.on("disconnect", () => {
-      console.log("deleting from sessions");
+      console.log(`Camera ${dev.devId} disconnected`);
       delete sessions[dev.devId];
     });
     if (with_audio) {
