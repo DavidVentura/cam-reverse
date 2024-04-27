@@ -68,12 +68,12 @@ export const createResponseForControlCommand = (session: Session, dv: DataView):
 
   if (cmd_id == ControlCommands.DevStatusAck) {
     // ParseDevStatus -> offset relevant?
-    let charging = u32_swap(dv.add(0x28).readU32()) & 1; // 0x14000101 v 0x14000100
-    let power = u16_swap(dv.add(0x18).readU16()); // '3730' or '3765', milliVolts?
+    let charging = u32_swap(dv.add(0x28).readU32()) & 1 ? "" : "not "; // 0x14000101 v 0x14000100
+    let power = u16_swap(dv.add(0x18).readU16()); // '3730' or '3765', milliVolts
     let dbm = dv.add(0x24).readU8() - 0x100; // 0xbf - 0x100 = -65dbm .. constant??
     // > -50 = excellent, -50 to -60 good, -60 to -70 fair, <-70 weak
 
-    console.log(`charging? ${charging}, batlevel? ${power}, wifi dbm: ${dbm}`);
+    console.log(`Camera ${session.devName}: ${charging}charging, battery at ${power/1000}V, Wifi ${dbm} dBm`);
   }
 
   if (cmd_id == ControlCommands.WifiSettingsAck) {
@@ -93,7 +93,7 @@ export const createResponseForControlCommand = (session: Session, dv: DataView):
       dns2: dv.add(0x10c).readString(0x10),
     };
     const buf = SendListWifi(session);
-    console.log(`Current wifi settings: ${JSON.stringify(wifiSettings, null, 2)}`);
+    console.log(`Current Wifi settings: ${JSON.stringify(wifiSettings, null, 2)}`);
     return [buf];
   }
 
