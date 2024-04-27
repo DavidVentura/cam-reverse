@@ -15,14 +15,13 @@ export const pair = ({ opts, ssid, password }: { opts: opt; ssid: string; passwo
   }
 
   const onLogin = (s: Session) => {
-    configureWifi(ssid, password);
+    configureWifi(ssid, password)(s);
     console.log(`WiFi config for camera ${s.devName} is done`);
   }
 
   devEv.on("discover", (rinfo: RemoteInfo, dev: DevSerial) => {
-    if (dev.devId in sessions && sessions[dev.devId] != undefined) {
+    if (dev.devId in sessions) {
       console.log(`Camera ${dev.devId} at ${rinfo.address} already discovered, ignoring`);
-      console.log(`ignoring ${dev.devId} - ${rinfo.address}`);
       return;
     }
     console.log(`Discovered camera ${dev.devId} at ${rinfo.address}`);
