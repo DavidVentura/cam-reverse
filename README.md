@@ -188,7 +188,7 @@ Every 8-10s
 
 There are some other strings in the APK ending in `-$$` which decode to other ips/hostnames.
 
-Most of the IPs point to AWS compute instances, and this connection is probably used to see live streams over the Internet using the app. It's fine blocking outgoing traffic from the cameras, as it won't affect the HTTP server.
+Most of the IPs point to AWS compute instances, and this connection is probably used to see live streams over the Internet using the app. It's fine (and recommended!) to block outgoing traffic from the cameras, as it won't affect the HTTP server.
 
 
 ## Other stuff
