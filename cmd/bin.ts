@@ -11,11 +11,11 @@ yargs(hideBin(process.argv))
     "start http server",
     (yargs) => {
       return yargs
-        .option("debug", { default: false })
+        .option("debug", { describe: "Log debug messages", default: false })
         .option("ansi", { default: false })
-        .option("audio", { default: false })
+        .option("audio", { describe: "Also stream audio from camera", default: true })
         .boolean(["debug", "ansi", "audio"])
-        .option("discovery_ip", { default: "192.168.1.255" })
+        .option("discovery_ip", { describe: "UDP broadcast IP address", default: "192.168.1.255" })
         .option("attempt_to_fix_packet_loss", { default: false })
         .option("port", { describe: "HTTP Port to listen on", default: 5000 })
         .number(["port"])
@@ -31,13 +31,14 @@ yargs(hideBin(process.argv))
     "configure a camera",
     (yargs) => {
       return yargs
-        .option("debug", { default: false })
+        .option("debug", { describe: "Log debug messages", default: false })
         .option("ansi", { default: false })
         .boolean(["debug", "ansi"])
-        .option("discovery_ip", { default: "192.168.1.255" })
+        .option("discovery_ip", { describe: "UDP broadcast IP address", default: "192.168.1.255" })
         .option("attempt_to_fix_packet_loss", { default: false })
-        .demandOption("ssid")
-        .demandOption("password")
+        .option("ssid", { describe: "Wifi network for the camera to connect to" })
+        .option("password", { describe: "Wifi network password" })
+        .demandOption(["ssid", "password"])
         .string(["ssid", "password"]);
     },
     (argv) => {
