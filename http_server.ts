@@ -26,6 +26,9 @@ const cameraNames = Object.assign({},
 // Returns the camera name (custom name, if it exists, otherwise its ID).
 const cameraName = (id: string): string => cameraNames[id] || id;
 
+// Page's favicon.
+const favicon = readFileSync("cam.ico.gz");
+
 // The HTTP server.
 export const serveHttp = (opts: opt, port: number, with_audio: boolean) => {
   const server = http.createServer((req, res) => {
@@ -42,8 +45,12 @@ export const serveHttp = (opts: opt, port: number, with_audio: boolean) => {
         res.end("Nothing online");
         return;
       }
-      const ui = readFileSync("asd.html").toString();
-      res.end(ui.replace(/\${id}/g, devId).replace(/\${name}/g, cameraName(devId)));
+      const ui = readFileSync("asd.html").toString()
+          .replace(/\${id}/g, devId)
+          .replace(/\${name}/g, cameraName(devId))
+          .replace(/\${audio}/g, with_audio.toString())
+          .replace(/\${debug}/g, opts.debug.toString());
+      res.end(ui);
       return;
     }
     if (req.url.startsWith("/audio/")) {
@@ -61,6 +68,14 @@ export const serveHttp = (opts: opt, port: number, with_audio: boolean) => {
       }
       res.setHeader("Content-Type", `text/event-stream`);
       audioResponses[devId].push(res);
+      console.log(`Audio stream requested for camera ${devId}`);
+      return;
+    }
+
+    if (req.url.startsWith("/favicon.ico")) {
+      res.setHeader("Content-Type", "image/x-icon");
+      res.setHeader("Content-Encoding", "gzip");
+      res.end(favicon);
       return;
     }
 
@@ -84,11 +99,14 @@ export const serveHttp = (opts: opt, port: number, with_audio: boolean) => {
       responses[devId].push(res);
       res.on("close", () => {
         responses[devId] = responses[devId].filter((r) => r !== res);
-        console.log(`Camera ${devId} closed connection`);
+        console.log(`Video stream closed for camera ${devId}`);
       });
     } else {
       res.write("<html>");
-      res.write("<head><title>All cameras</title></head>");
+      res.write("<head>");
+      res.write(`<link rel="shortcut icon" href="/favicon.ico">`);
+      res.write("<title>All cameras</title>");
+      res.write("</head>");
       res.write("<body>");
       res.write("<h1>All cameras</h1><hr/>");
       Object.keys(sessions).forEach((id) =>
