@@ -60,7 +60,9 @@ There's a basic UI which can display multiple cameras:
 
 The server will send a broadcast packet every few seconds to discover all the cameras available; this means that it *must* run in the same broadcast domain (VLAN) as your cameras.
 
-Clicking on the image will take you to a page that has audio streaming enabled.
+Clicking on the image will take you to a page that has audio streaming. Click the button below the image to mute/unmute the audio.
+
+To customize the camera names, edit the file `cameras.txt` and add the names of your cameras, one per line, in the format `CAMERA_ID=descriptive name` (you must restart the HTTP server for the changes to take effect).
 
 ## Protocol
 
