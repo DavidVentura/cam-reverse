@@ -123,7 +123,7 @@ export const serveHttp = (opts: opt, port: number, with_audio: boolean) => {
   const startSession = (s: Session) => {
     s.send(SendDevStatus(s));
     startVideoStream(s);
-    console.log(`Camera ${s.devName} is now streaming`);
+    console.log(`Camera ${s.devName} is now ready to stream`);
   }
 
   devEv.on("discover", (rinfo: RemoteInfo, dev: DevSerial) => {
