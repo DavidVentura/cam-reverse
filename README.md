@@ -24,12 +24,14 @@ configure a camera
 Options:
   --help                        Show help                              [boolean]
   --version                     Show version number                    [boolean]
-  --debug                                             [boolean] [default: false]
+  --debug                       Log debug messages    [boolean] [default: false]
   --ansi                                              [boolean] [default: false]
-  --discovery_ip                                      [default: "192.168.1.255"]
+  --discovery_ip                Camera discovery IP address
+                                                      [default: "192.168.1.255"]
   --attempt_to_fix_packet_loss                                  [default: false]
-  --ssid                                                     [string] [required]
-  --password                                                 [string] [required]
+  --ssid                        Wifi network for the camera to connect to
+                                                             [string] [required]
+  --password                    Wifi network password        [string] [required]
 ```
 
 ## Running
@@ -44,10 +46,12 @@ start http server
 Options:
   --help                        Show help                              [boolean]
   --version                     Show version number                    [boolean]
-  --debug                                             [boolean] [default: false]
+  --debug                       Log debug messages    [boolean] [default: false]
   --ansi                                              [boolean] [default: false]
-  --audio                                             [boolean] [default: false]
-  --discovery_ip                                      [default: "192.168.1.255"]
+  --audio                       Also stream audio from camera
+                                                       [boolean] [default: true]
+  --discovery_ip                Camera discovery IP address
+                                                      [default: "192.168.1.255"]
   --attempt_to_fix_packet_loss                                  [default: false]
   --port                        HTTP Port to listen on  [number] [default: 5000]
 ```
@@ -58,7 +62,7 @@ There's a basic UI which can display multiple cameras:
 
 ![](pics/web-ui.jpg?raw=true)
 
-The server will send a broadcast packet every few seconds to discover all the cameras available; this means that it *must* run in the same broadcast domain (VLAN) as your cameras.
+The server will send a broadcast packet every few seconds to discover all the cameras available; this means that it *must* run in the same broadcast domain (VLAN) as your cameras. For debugging purposes, you can send the packets to a specific camera by setting `--discovery_ip` to its IP address.
 
 Clicking on the image will take you to a page that has audio streaming. Click the button below the image to mute/unmute the audio.
 
