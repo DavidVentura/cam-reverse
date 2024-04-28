@@ -29,7 +29,7 @@
 
 	var audio_context;
 	const audio_button = document.getElementById('audio');
-
+	audio_button.disabled = !${audio};
 	update_audio_button();
 
 	function console_log(s) {
@@ -51,7 +51,13 @@
 		const audioBuffer = audio_context.createBuffer(channels, 960, sample_rate); // 960??
 		//const audioBuffer = audio_context.createBuffer(channels, decoded.length, sample_rate);
 
+		audio_context.onstatechange = () => {
+			console_log("Audio state is now ", audio_context.state);
+			update_audio_button(audio_context.state == "running");
+		};
+
 		gain_node.connect(audio_context.destination); // Connect gain node to speakers
+		audio_context.resume();
 
 		const evtSource = new EventSource("/audio/${id}");
 		if (${debug}) {
@@ -83,33 +89,23 @@
 		};
 	}
 
-	function update_audio_button() {
-		if (!${audio}) {
-			return;
+	function update_audio_button(on) {
+		if (${audio}) {
+			audio_button.innerText = "Audio: " + (on ? "on \u{1F508}" : "off \u{1F507}");
 		}
-		audio_button.disabled = false;
-		const off = audio_context == undefined || audio_context.state == "suspended";
-		audio_button.innerText = "Audio: " + (off ? "off \u{1F507}" : "on \u{1F508}");
 	}
 
 	function toggle_audio() {
 		if (audio_context == undefined) {
 			setup_audio();
-			audio_context.resume();
-			update_audio_button();
-			console_log("Audio stream started");
 			return;
 		}
 		if (audio_context.state == "running") {
 			audio_context.suspend();
-			console_log("Audio stream suspended");
-			update_audio_button();
 			return;
 		}
 		if (audio_context.state == "suspended") {
 			audio_context.resume();
-			console_log("Audio stream resumed");
-			update_audio_button();
 			return;
 		}
 		console_log("Unknown audio stream status");
