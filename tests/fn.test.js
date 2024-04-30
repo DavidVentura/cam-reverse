@@ -135,11 +135,11 @@ describe("parse packet", () => {
       prefix: "BATD",
       serial: "156362",
       suffix: "WONJM",
-      serialU64: bigint(156362),
+      serialU64: BigInt(156362),
       devId: "BATD156362WONJM",
     };
 
-    assert.equal(parse_PunchPkt(pkt), expected);
+    assert.deepEqual(parse_PunchPkt(pkt), expected);
   });
 });
 describe("make packet", () => {
