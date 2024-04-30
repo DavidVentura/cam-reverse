@@ -107,7 +107,7 @@ export const makeSession = (
   };
 
   session.eventEmitter.on("disconnect", () => {
-    console.log(`Disconnected from ${session.devName} - ${session.dst_ip}`);
+    console.log(`Disconnected from camera ${session.devName} at ${session.dst_ip}`);
     session.dst_ip = "0.0.0.0";
     session.connected = false;
     session.timers.forEach((x) => clearInterval(x));
@@ -115,7 +115,7 @@ export const makeSession = (
   });
 
   session.eventEmitter.on("login", () => {
-    console.log(`Logged in - ${session.devName}`);
+    console.log(`Logging in to camera ${session.devName}`);
     onLogin(session);
   });
   return session;
