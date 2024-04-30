@@ -25,6 +25,9 @@ ilnk_proto.fields.encrypted 		= ProtoField.bool("iLnkP2P.encrypted", "Encrypted"
 ilnk_proto.fields.cmd_type 		= ProtoField.string("iLnkP2P.cmd_type", "Cmd Pkt Type")
 ilnk_proto.fields.decrypted_data	= ProtoField.bytes("iLnkP2P.decrypted_data", "Decrypted data")
 
+-- PunchPkt
+ilnk_proto.fields.serial	= ProtoField.string("iLnkP2P.serial", "Serial")
+
 lut = {
     [0xf1f0] = "Close",
     [0xf132] = "LanSearchExt",
@@ -64,6 +67,14 @@ function ilnk_proto.dissector(buffer, pinfo, tree)
 
 	-- Set the protocol description in the packet list
 	pinfo.cols.protocol:set("iLnkP2P")
+	if packetname == "PunchPkt" or packetname == "P2pRdy" then
+		local len = buffer(2, 2)
+		subtree:add(ilnk_proto.fields.len, len)
+		local serial_prefix = buffer(4, 4):string()
+		local serial_no = UInt64(buffer(12, 4):uint(), buffer(8, 4):uint())
+		local serial_suffix = buffer(16, 5):string()
+		subtree:add(ilnk_proto.fields.serial, serial_prefix..serial_no..serial_suffix)
+	end
 	if packetname == "DrwAck" then
 		subtree:add(ilnk_proto.fields.len, buffer(2, 2))
 		subtree:add(ilnk_proto.fields.m_type, buffer(4, 1))
@@ -140,4 +151,5 @@ function ilnk_proto.dissector(buffer, pinfo, tree)
 	-- subtree:add(ilnk_proto.fields.payload, buffer(2, packet_length-2))
 end
 
-udp_table = DissectorTable.get("udp.port"):add(49512, ilnk_proto)
+udp_table = DissectorTable.get("udp.port"):add(50563, ilnk_proto)
+udp_table2 = DissectorTable.get("udp.port"):add(32108, ilnk_proto)
