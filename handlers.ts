@@ -27,11 +27,12 @@ export const handle_P2PAlive = (session: Session, _: DataView) => {
 };
 
 export const handle_P2PRdy = (session: Session, _: DataView) => {
+  // TODO - config
   const b = SendUsrChk(session, "admin", "admin");
   session.send(b);
 };
 
-export const makePunchPkt = (dev: DevSerial): DataView => {
+export const makeP2pRdy = (dev: DevSerial): DataView => {
   const len = dev.prefix.length + dev.suffix.length + 8;
   const outbuf = new DataView(new Uint8Array(0x14).buffer); // 8 = serial u64
   outbuf.add(0).writeString(dev.prefix);
@@ -73,7 +74,7 @@ export const createResponseForControlCommand = (session: Session, dv: DataView):
     let dbm = dv.add(0x24).readU8() - 0x100; // 0xbf - 0x100 = -65dbm .. constant??
     // > -50 = excellent, -50 to -60 good, -60 to -70 fair, <-70 weak
 
-    console.log(`Camera ${session.devName}: ${charging}charging, battery at ${power/1000}V, Wifi ${dbm} dBm`);
+    console.log(`Camera ${session.devName}: ${charging}charging, battery at ${power / 1000}V, Wifi ${dbm} dBm`);
   }
 
   if (cmd_id == ControlCommands.WifiSettingsAck) {

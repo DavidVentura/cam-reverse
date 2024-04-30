@@ -2,7 +2,7 @@ import { createSocket, RemoteInfo } from "node:dgram";
 import EventEmitter from "node:events";
 
 import { Commands, CommandsByValue } from "./datatypes.js";
-import { handle_Drw, handle_P2PAlive, handle_P2PRdy, makePunchPkt, noop, notImpl } from "./handlers.js";
+import { handle_Drw, handle_P2PAlive, handle_P2PRdy, makeP2pRdy, noop, notImpl } from "./handlers.js";
 import { hexdump } from "./hexdump.js";
 import { create_P2pAlive, DevSerial, SendStartVideo, SendVideoResolution, SendWifiDetails } from "./impl.js";
 import { opt } from "./options.js";
@@ -62,8 +62,11 @@ export const makeSession = (
   sock.on("message", (msg, rinfo) => handleIncoming(session, handlers, msg, rinfo));
 
   sock.on("listening", () => {
-    const buf = makePunchPkt(dev);
+    const buf = makeP2pRdy(dev);
     session.send(buf);
+    // The YsxLite sends a P2PAlive message immediately after P2PRdy
+    const alive_buf = create_P2pAlive();
+    session.send(alive_buf);
   });
 
   const SEND_PORT = 32108;
