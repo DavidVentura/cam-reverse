@@ -3,9 +3,8 @@ import "../shim.ts";
 import assert from "assert";
 
 import { XqBytesDec, XqBytesEnc } from "../func_replacements.js";
-import { createResponseForControlCommand } from "../handlers.js";
 import { hexdump } from "../hexdump.js";
-import { SendStartVideo, SendDevStatus, SendUsrChk, SendWifiDetails } from "../impl.ts";
+import { SendStartVideo, SendDevStatus, SendUsrChk, SendWifiDetails, parse_PunchPkt } from "../impl.ts";
 import { placeholderTypes, sprintf } from "../utils.js";
 
 describe("debug_tools", () => {
@@ -126,6 +125,21 @@ const hstrToBA = (hs) => new Uint8Array(hs.match(/../g).map((h) => parseInt(h, 1
 describe("events", () => {
   it("emits login event upon logging in", () => {
     // TODO
+  });
+});
+describe("parse packet", () => {
+  it("parses PunchPkt", () => {
+    const in_pkt_str = "f14100144241544400000000000262ca574f4e4a4d000000";
+    const pkt = new DataView(hstrToBA(in_pkt_str));
+    const expected = {
+      prefix: "BATD",
+      serial: "156362",
+      suffix: "WONJM",
+      serialU64: bigint(156362),
+      devId: "BATD156362WONJM",
+    };
+
+    assert.equal(parse_PunchPkt(pkt), expected);
   });
 });
 describe("make packet", () => {
