@@ -49,11 +49,7 @@ lut = {
     [0xf169] = "ListenReqAck",
     [0xf170] = "RlyHelloAck",
     [0xf171] = "RlyHelloAck2",
-	__index = function(tbl, key)
-		return "UNK " .. string.format("0x%X", key)
-	end
 }
-setmetatable(lut, lut)
 
 -- Define a function to dissect the packets
 function ilnk_proto.dissector(buffer, pinfo, tree)
@@ -62,8 +58,10 @@ function ilnk_proto.dissector(buffer, pinfo, tree)
 	local subtree = tree:add(ilnk_proto, buffer(), "iLnkP2P")
 
 	-- Add the entire packet as a field
-	local packetname = lut[buffer(0, 2):uint()]
-	subtree:add(ilnk_proto.fields.type, packetname)
+	local packettype = buffer(0, 2):uint()
+	local packetname = lut[packettype]
+	packetname = packetname or "UNK " .. string.format("0x%X", packettype)
+	subtree:add(ilnk_proto.fields.type, buffer(0, 2), packetname)
 
 	-- Set the protocol description in the packet list
 	pinfo.cols.protocol:set("iLnkP2P")
