@@ -8,7 +8,7 @@ Per pictures of the [X5](https://github.com/DavidVentura/cam-reverse/blob/master
 
 ## Building
 
-Simply run `make build` to build the binaries.
+Run `make build` or `npm run build` to build the server artifact. You can also find some pre-built files [in the CI results](https://github.com/DavidVentura/cam-reverse/actions) or [in the releases](https://github.com/DavidVentura/cam-reverse/releases/)
 
 ## Pairing a new camera
 
@@ -19,7 +19,7 @@ Connect to the device's access point (e.g., FTYC811847AGFDZ) and run `node dist/
 
 ## Running
 
-To execute the HTTP server, run `node dist/bin.cjs http_server`; you can access the JPEG stream at http://localhost:5000/ and (optionally) a file `audio.pcm` will be created.
+To execute the HTTP server, run `node dist/bin.cjs http_server`; you can access the JPEG stream at http://localhost:5000/.
 
 The roundtrip delay when using MJPEG is [~350ms](pics/delay.jpg?raw=true).
 
