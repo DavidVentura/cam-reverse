@@ -32,17 +32,6 @@
 	audio_button.disabled = !${audio};
 	update_audio_button();
 
-	function console_log(s) {
-		if (!${debug}) {
-			return;
-		}
-		let m = "";
-		for (let i = 0; i < arguments.length; i++) {
-			m += arguments[i];
-		}
-		console.log(m);
-	}
-
 	function setup_audio() {
 		audio_context = new AudioContext();
 		const gain_node = audio_context.createGain(); // Declare gain node
@@ -52,7 +41,7 @@
 		//const audioBuffer = audio_context.createBuffer(channels, decoded.length, sample_rate);
 
 		audio_context.onstatechange = () => {
-			console_log("Audio state is now ", audio_context.state);
+			console.log("Audio state is now ", audio_context.state);
 			update_audio_button(audio_context.state == "running");
 		};
 
@@ -62,10 +51,10 @@
 		const evtSource = new EventSource("/audio/${id}");
 		if (${debug}) {
 			evtSource.onopen = (e) => {
-				console_log("evtsource open");
+				console.log("evtsource open");
 			}
 			evtSource.onerror = (e) => {
-				console_log("evtsource error", e);
+				console.log("evtsource error", e);
 			}
 		}
 		let endsAt = 0;
@@ -108,7 +97,7 @@
 			audio_context.resume();
 			return;
 		}
-		console_log("Unknown audio stream status");
+		console.log("Unknown audio stream status");
 	}
 	</script>
 </html>

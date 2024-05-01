@@ -1,16 +1,14 @@
 import { Commands, CommandsByValue, ControlCommands } from "./datatypes.js";
 import { XqBytesDec } from "./func_replacements.js";
-import { hexdump } from "./hexdump.js";
 import { create_P2pRdy, SendListWifi, SendUsrChk, DevSerial } from "./impl.js";
 import { Session } from "./session.js";
 import { u16_swap, u32_swap } from "./utils.js";
+import { logger } from "./logger.js";
 
 export const notImpl = (session: Session, dv: DataView) => {
   const raw = dv.readU16();
   const cmd = CommandsByValue[raw];
-  if (session.options.debug) {
-    console.log(`^^ ${cmd} (${raw.toString(16)}) and it's not implemented yet`);
-  }
+  logger.debug(`^^ ${cmd} (${raw.toString(16)}) and it's not implemented yet`);
 };
 
 export const noop = (_: Session, __: DataView) => {};
@@ -47,17 +45,13 @@ export const createResponseForControlCommand = (session: Session, dv: DataView):
   const payload_len = u16_swap(dv.add(0xc).readU16());
 
   if (start_type != 0x110a) {
-    console.error(`Expected start_type to be 0xa11, got 0x${start_type.toString(16)}`);
+    logger.error(`Expected start_type to be 0xa11, got 0x${start_type.toString(16)}`);
     return [];
   }
   const rotate_chr = 4;
   if (payload_len > rotate_chr) {
     // 20 = 16 (header) + 4 (??)
     XqBytesDec(dv.add(20), payload_len - 4, rotate_chr);
-    if (session.options.debug) {
-      console.log("Decrypted");
-      console.log(hexdump(dv));
-    }
   }
 
   if (cmd_id == ControlCommands.ConnectUserAck) {
@@ -74,7 +68,7 @@ export const createResponseForControlCommand = (session: Session, dv: DataView):
     let dbm = dv.add(0x24).readU8() - 0x100; // 0xbf - 0x100 = -65dbm .. constant??
     // > -50 = excellent, -50 to -60 good, -60 to -70 fair, <-70 weak
 
-    console.log(`Camera ${session.devName}: ${charging}charging, battery at ${power / 1000}V, Wifi ${dbm} dBm`);
+    logger.info(`Camera ${session.devName}: ${charging}charging, battery at ${power / 1000}V, Wifi ${dbm} dBm`);
   }
 
   if (cmd_id == ControlCommands.WifiSettingsAck) {
@@ -94,21 +88,17 @@ export const createResponseForControlCommand = (session: Session, dv: DataView):
       dns2: dv.add(0x10c).readString(0x10),
     };
     const buf = SendListWifi(session);
-    console.log(`Current Wifi settings: ${JSON.stringify(wifiSettings, null, 2)}`);
+    logger.info(`Current Wifi settings: ${JSON.stringify(wifiSettings, null, 2)}`);
     return [buf];
   }
 
   if (cmd_id == ControlCommands.ListWifiAck) {
     let startat = 0x10;
     let msg_len = 91;
-    if (session.options.debug) {
-      console.log("payload len", payload_len);
-    }
+    logger.debug("payload len", payload_len);
     let msg_count = (payload_len - 9) / msg_len;
     let remote_msg_count = dv.add(startat).readU32LE();
-    if (session.options.debug) {
-      console.log("should get messages:", msg_count, "in payload: ", remote_msg_count);
-    }
+    logger.debug("should get messages:", msg_count, "in payload: ", remote_msg_count);
     startat += 4;
     let items = [];
     for (let i = 0; i < msg_count; i++) {
@@ -122,11 +112,9 @@ export const createResponseForControlCommand = (session: Session, dv: DataView):
         mode: dv.add(startat + 0x54).readU32LE(),
         channel: dv.add(startat + 0x58).readU32LE(),
       };
-      console.log(`Wifi Item: ${JSON.stringify(wifiListItem, null, 2)}`);
+      logger.info(`Wifi Item: ${JSON.stringify(wifiListItem, null, 2)}`);
       startat += msg_len;
-      if (session.options.debug) {
-        console.log("ended at", startat);
-      }
+      logger.debug("ended at", startat);
       items.push(wifiListItem);
     }
   }

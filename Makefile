@@ -1,4 +1,4 @@
-.PHONY: run hook install-wireshark-dissector test build
+.PHONY: run hook install-wireshark-dissector test build typecheck
 
 bundle.js: frida-hooks.js func_replacements.js
 	~/node_modules/.bin/frida-compile -o $@ frida-hooks.js
@@ -8,12 +8,13 @@ venv: requirements.txt
 	./venv/bin/pip install -r requirements.txt
 	touch venv
 
-build: node_modules
+typecheck: node_modules
 	npm run tsc
+build: node_modules
 	npm run build
 
-run: node_modules
-	./node_modules/.bin/ts-node --esm cmd/bin.ts http_server --port=1234
+run: build
+	node dist/bin.cjs http_server --port=1234
 
 hook: bundle.js venv
 	./venv/bin/python3 -u loader3.py

@@ -2,6 +2,7 @@ import { RemoteInfo } from "dgram";
 import { readFileSync, existsSync } from "node:fs";
 import http from "node:http";
 
+import { logger } from "./logger.js";
 import { opt } from "./options.js";
 import { discoverDevices } from "./discovery.js";
 import { DevSerial, SendDevStatus } from "./impl.js";
@@ -77,7 +78,7 @@ export const serveHttp = (opts: opt, port: number, with_audio: boolean) => {
       }
       res.setHeader("Content-Type", `text/event-stream`);
       audioResponses[devId].push(res);
-      console.log(`Audio stream requested for camera ${devId}`);
+      logger.info(`Audio stream requested for camera ${devId}`);
       return;
     }
 
@@ -90,7 +91,7 @@ export const serveHttp = (opts: opt, port: number, with_audio: boolean) => {
 
     if (req.url.startsWith("/camera/")) {
       let devId = req.url.split("/")[2];
-      console.log(`Video stream requested for camera ${devId}`);
+      logger.info(`Video stream requested for camera ${devId}`);
       let s = sessions[devId];
 
       if (s === undefined) {
@@ -108,7 +109,7 @@ export const serveHttp = (opts: opt, port: number, with_audio: boolean) => {
       responses[devId].push(res);
       res.on("close", () => {
         responses[devId] = responses[devId].filter((r) => r !== res);
-        console.log(`Video stream closed for camera ${devId}`);
+        logger.info(`Video stream closed for camera ${devId}`);
       });
     } else {
       res.write("<html>");
@@ -127,21 +128,21 @@ export const serveHttp = (opts: opt, port: number, with_audio: boolean) => {
     }
   });
 
-  let devEv = discoverDevices(opts.debug, opts.discovery_ip);
+  let devEv = discoverDevices(opts.discovery_ip);
 
   const startSession = (s: Session) => {
     s.send(SendDevStatus(s));
     startVideoStream(s);
-    console.log(`Camera ${s.devName} is now ready to stream`);
-  }
+    logger.info(`Camera ${s.devName} is now ready to stream`);
+  };
 
   devEv.on("discover", (rinfo: RemoteInfo, dev: DevSerial) => {
     if (dev.devId in sessions) {
-      console.log(`Camera ${dev.devId} at ${rinfo.address} already discovered, ignoring`);
+      logger.info(`Camera ${dev.devId} at ${rinfo.address} already discovered, ignoring`);
       return;
     }
 
-    console.log(`Discovered camera ${dev.devId} at ${rinfo.address}`);
+    logger.info(`Discovered camera ${dev.devId} at ${rinfo.address}`);
     responses[dev.devId] = [];
     audioResponses[dev.devId] = [];
     const s = makeSession(Handlers, dev, rinfo, startSession, opts);
@@ -158,7 +159,7 @@ export const serveHttp = (opts: opt, port: number, with_audio: boolean) => {
     });
 
     s.eventEmitter.on("disconnect", () => {
-      console.log(`Camera ${dev.devId} disconnected`);
+      logger.info(`Camera ${dev.devId} disconnected`);
       delete sessions[dev.devId];
     });
     if (with_audio) {
@@ -175,6 +176,6 @@ export const serveHttp = (opts: opt, port: number, with_audio: boolean) => {
     sessions[dev.devId] = s;
   });
 
-  console.log(`Starting HTTP server on port ${port}`);
+  logger.info(`Starting HTTP server on port ${port}`);
   server.listen(port);
 };

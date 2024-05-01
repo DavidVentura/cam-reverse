@@ -3,9 +3,9 @@ import EventEmitter from "node:events";
 
 import { Commands, CommandsByValue } from "./datatypes.js";
 import { handle_Drw, handle_P2PAlive, handle_P2PRdy, makeP2pRdy, noop, notImpl } from "./handlers.js";
-import { hexdump } from "./hexdump.js";
 import { create_P2pAlive, DevSerial, SendStartVideo, SendVideoResolution, SendWifiDetails } from "./impl.js";
 import { opt } from "./options.js";
+import { logger } from "./logger.js";
 
 export type Session = {
   send: (msg: DataView) => void;
@@ -38,10 +38,7 @@ const handleIncoming: msgCb = (session, handlers, msg, rinfo) => {
   const ab = new Uint8Array(msg).buffer;
   const dv = new DataView(ab);
   const cmd = CommandsByValue[dv.readU16()];
-  if (session.options.debug) {
-    console.log(`<< ${cmd}`);
-    console.log(hexdump(msg.buffer, { ansi: session.options.ansi, ansiColor: 1 }));
-  }
+  logger.log("trace", `<< ${cmd}`);
   handlers[cmd](session, dv, rinfo);
   session.lastReceivedPacket = Date.now();
 };
@@ -105,12 +102,7 @@ export const makeSession = (
     send: (msg: DataView) => {
       const raw = msg.readU16();
       const cmd = CommandsByValue[raw];
-      if (options.debug) {
-        console.log(`>> ${cmd}`);
-        if (raw != Commands.P2PAlive) {
-          console.log(hexdump(msg.buffer, { ansi: options.ansi, ansiColor: 0 }));
-        }
-      }
+      logger.log("trace", `>> ${cmd}`);
       sock.send(new Uint8Array(msg.buffer), SEND_PORT, session.dst_ip);
     },
     dst_ip: ra.address,
@@ -122,7 +114,7 @@ export const makeSession = (
   };
 
   session.eventEmitter.on("disconnect", () => {
-    console.log(`Disconnected from camera ${session.devName} at ${session.dst_ip}`);
+    logger.info(`Disconnected from camera ${session.devName} at ${session.dst_ip}`);
     session.dst_ip = "0.0.0.0";
     session.connected = false;
     session.timers.forEach((x) => clearInterval(x));
@@ -130,7 +122,7 @@ export const makeSession = (
   });
 
   session.eventEmitter.on("login", () => {
-    console.log(`Logging in to camera ${session.devName}`);
+    logger.info(`Logging in to camera ${session.devName}`);
     onLogin(session);
   });
   return session;
