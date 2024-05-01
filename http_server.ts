@@ -7,6 +7,7 @@ import { opt } from "./options.js";
 import { discoverDevices } from "./discovery.js";
 import { DevSerial, SendDevStatus } from "./impl.js";
 import { Handlers, makeSession, Session, startVideoStream } from "./session.js";
+import { addExifToJpeg, createExifOrientation } from "./exif.js";
 
 // @ts-expect-error TS2307
 import favicon from "./cam.ico.gz";
@@ -20,6 +21,15 @@ const sessions: Record<string, Session> = {};
 
 // Text file containing the mapping of camera names.
 const nameFile = "cameras.txt";
+
+// https://sirv.com/help/articles/rotate-photos-to-be-upright/
+const oMap = [1, 8, 3, 6];
+const oMapMirror = [2, 7, 4, 5];
+const orientations = [1, 2, 3, 4, 5, 6, 7, 8].reduce((acc, cur) => {
+  return { [cur]: createExifOrientation(cur), ...acc };
+}, {});
+
+let camSettings: { [key: string]: { orientation: number; mirror: boolean } } = {};
 
 // Reads the mapping of serial numbers to camera names from the text file.
 const cameraNames = Object.assign(
@@ -90,7 +100,23 @@ export const serveHttp = (opts: opt, port: number, with_audio: boolean) => {
       return;
     }
 
-    if (req.url.startsWith("/camera/")) {
+    if (req.url.startsWith("/rotate/")) {
+      let devId = req.url.split("/")[2];
+      let curPos = camSettings[devId]?.orientation || 0;
+      let nextPos = (curPos + 1) % 4;
+      logger.info(`Rotating ${devId} to ${nextPos}`);
+      camSettings[devId].orientation = nextPos;
+      res.writeHead(204);
+      res.end();
+      return;
+    } else if (req.url.startsWith("/mirror/")) {
+      let devId = req.url.split("/")[2];
+      logger.info(`Mirroring ${devId}`);
+      camSettings[devId].mirror = !camSettings[devId].mirror;
+      res.writeHead(204);
+      res.end();
+      return;
+    } else if (req.url.startsWith("/camera/")) {
       let devId = req.url.split("/")[2];
       logger.info(`Video stream requested for camera ${devId}`);
       let s = sessions[devId];
@@ -151,8 +177,12 @@ export const serveHttp = (opts: opt, port: number, with_audio: boolean) => {
     const header = Buffer.from(`--${BOUNDARY}\r\nContent-Type: image/jpeg\r\n\r\n`);
 
     s.eventEmitter.on("frame", () => {
-      const assembled = Buffer.concat(s.curImage);
-
+      // Add an EXIF header to indicate if the image should be rotated or mirrored
+      let orientation = camSettings[dev.devId].orientation;
+      orientation = camSettings[dev.devId].mirror ? oMapMirror[orientation] : oMap[orientation];
+      const exifSegment = orientations[orientation];
+      const jpegHeader = addExifToJpeg(s.curImage[0], exifSegment);
+      const assembled = Buffer.concat([jpegHeader, ...s.curImage.slice(1)]);
       responses[dev.devId].forEach((res) => {
         res.write(header);
         res.write(assembled);
@@ -175,6 +205,7 @@ export const serveHttp = (opts: opt, port: number, with_audio: boolean) => {
       });
     }
     sessions[dev.devId] = s;
+    camSettings[dev.devId] = { orientation: 0, mirror: false };
   });
 
   logger.info(`Starting HTTP server on port ${port}`);
