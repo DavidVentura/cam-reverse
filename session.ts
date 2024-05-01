@@ -21,6 +21,7 @@ export type Session = {
   rcvSeqId: number;
   frame_is_bad: boolean;
   frame_was_fixed: boolean;
+  started: boolean;
   options: opt;
 };
 
@@ -62,23 +63,33 @@ export const makeSession = (
   sock.on("message", (msg, rinfo) => handleIncoming(session, handlers, msg, rinfo));
 
   sock.on("listening", () => {
-    const buf = makeP2pRdy(dev);
-    session.send(buf);
-    // The YsxLite sends a P2PAlive message immediately after P2PRdy
-    const alive_buf = create_P2pAlive();
-    session.send(alive_buf);
+    const startup = () => {
+      const buf = makeP2pRdy(dev);
+      session.send(buf);
+      // The YsxLite sends a P2PAlive message immediately after P2PRdy
+      const alive_buf = create_P2pAlive();
+      session.send(alive_buf);
+      session.started = true;
+    };
+    if (options.slow_startup) {
+      setTimeout(startup, 3000);
+    } else {
+      startup();
+    }
   });
 
   const SEND_PORT = 32108;
   sock.bind();
   const sessTimer = setInterval(() => {
     const delta = Date.now() - session.lastReceivedPacket;
-    if (delta > 600) {
-      let buf = create_P2pAlive();
-      session.send(buf);
-    }
-    if (delta > 8000) {
-      session.eventEmitter.emit("disconnect");
+    if (session.started) {
+      if (delta > 600) {
+        let buf = create_P2pAlive();
+        session.send(buf);
+      }
+      if (delta > 8000) {
+        session.eventEmitter.emit("disconnect");
+      }
     }
   }, 400);
 
@@ -90,6 +101,7 @@ export const makeSession = (
     connected: true,
     timers: [sessTimer],
     devName: dev.devId,
+    started: false,
     send: (msg: DataView) => {
       const raw = msg.readU16();
       const cmd = CommandsByValue[raw];
