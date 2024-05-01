@@ -155,6 +155,13 @@ export const SendUsrChk = (session: Session, username: string, password: string)
   return makeDataReadWrite(session, ControlCommands.ConnectUser, cmd_payload);
 };
 
+export const create_LanSearchExt = (): DataView => {
+  const outbuf = new DataView(new Uint8Array(4).buffer);
+  outbuf.writeU16(Commands.LanSearchExt);
+  outbuf.add(2).writeU16(0x0);
+  return outbuf;
+};
+
 export const create_LanSearch = (): DataView => {
   const outbuf = new DataView(new Uint8Array(4).buffer);
   outbuf.writeU16(Commands.LanSearch);

@@ -69,7 +69,8 @@ export const makeSession = (
       session.started = true;
     };
     if (options.slow_startup) {
-      setTimeout(startup, 3000);
+      logger.info("Delaying session startup");
+      setTimeout(startup, 6500);
     } else {
       startup();
     }
