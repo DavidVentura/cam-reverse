@@ -16,45 +16,10 @@ Ensure your device in access point mode (the blue LED blinks slowly to indicate 
 
 Connect to the device's access point (e.g., FTYC811847AGFDZ) and run `node dist/bin.cjs pair --ssid <SSID> --password <PASSWORD>`.
 
-```bash
-$ node dist/bin.cjs pair --help
-
-configure a camera
-
-Options:
-  --help                        Show help                              [boolean]
-  --version                     Show version number                    [boolean]
-  --debug                       Log debug messages    [boolean] [default: false]
-  --ansi                                              [boolean] [default: false]
-  --discovery_ip                Camera discovery IP address
-                                                      [default: "192.168.1.255"]
-  --attempt_to_fix_packet_loss                                  [default: false]
-  --ssid                        Wifi network for the camera to connect to
-                                                             [string] [required]
-  --password                    Wifi network password        [string] [required]
-```
 
 ## Running
 
 To execute the HTTP server, run `node dist/bin.cjs http_server`; you can access the JPEG stream at http://localhost:5000/ and (optionally) a file `audio.pcm` will be created.
-
-```bash
-$ node dist/bin.cjs http_server --help
-
-start http server
-
-Options:
-  --help                        Show help                              [boolean]
-  --version                     Show version number                    [boolean]
-  --debug                       Log debug messages    [boolean] [default: false]
-  --ansi                                              [boolean] [default: false]
-  --audio                       Also stream audio from camera
-                                                       [boolean] [default: true]
-  --discovery_ip                Camera discovery IP address
-                                                      [default: "192.168.1.255"]
-  --attempt_to_fix_packet_loss                                  [default: false]
-  --port                        HTTP Port to listen on  [number] [default: 5000]
-```
 
 The roundtrip delay when using MJPEG is [~350ms](pics/delay.jpg?raw=true).
 
