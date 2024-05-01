@@ -151,5 +151,15 @@ function ilnk_proto.dissector(buffer, pinfo, tree)
 	-- subtree:add(ilnk_proto.fields.payload, buffer(2, packet_length-2))
 end
 
-udp_table = DissectorTable.get("udp.port"):add(50563, ilnk_proto)
+local function heuristic_checker(buffer, pinfo, tree)
+	length = buffer:len()
+    if length < 2 then return false end
+	local packetname = lut[buffer(0, 2):uint()]
+	if packetname ~= nil then
+		ilnk_proto.dissector(buffer, pinfo, tree)
+		return true
+	end
+	return false
+end
 udp_table2 = DissectorTable.get("udp.port"):add(32108, ilnk_proto)
+h = ilnk_proto:register_heuristic("udp", heuristic_checker)
