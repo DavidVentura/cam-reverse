@@ -21,7 +21,7 @@ const sessions: Record<string, Session> = {};
 // Text file containing the mapping of camera names.
 const nameFile = "cameras.txt";
 
-// Reads the simple mapping of camera names from the text file.
+// Reads the mapping of serial numbers to camera names from the text file.
 const cameraNames = Object.assign(
   {},
   ...(existsSync(nameFile) ? readFileSync(nameFile, "utf8") : "")
@@ -32,7 +32,7 @@ const cameraNames = Object.assign(
     .filter((l) => l.trim() != "")
     .map((l) => {
       let kv = l.split("=");
-      return { [kv[0]]: kv[1] };
+      return { [kv[0].trim()]: kv[1].trim() };
     }),
 );
 
@@ -41,6 +41,7 @@ const cameraName = (id: string): string => cameraNames[id] || id;
 
 // The HTTP server.
 export const serveHttp = (opts: opt, port: number, with_audio: boolean) => {
+  logger.info(`Mapping camera names: ${JSON.stringify(cameraNames)}`);
   const server = http.createServer((req, res) => {
     if (req.url.startsWith("/ui/")) {
       let devId = req.url.split("/")[2];
