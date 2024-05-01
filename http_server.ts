@@ -7,6 +7,11 @@ import { discoverDevices } from "./discovery.js";
 import { DevSerial, SendDevStatus } from "./impl.js";
 import { Handlers, makeSession, Session, startVideoStream } from "./session.js";
 
+// @ts-expect-error TS2307
+import favicon from "./cam.ico.gz";
+// @ts-expect-error TS2307
+import html_template from "./asd.html";
+
 const BOUNDARY = "a very good boundary line";
 const responses: Record<string, http.ServerResponse[]> = {};
 const audioResponses: Record<string, http.ServerResponse[]> = {};
@@ -16,18 +21,22 @@ const sessions: Record<string, Session> = {};
 const nameFile = "cameras.txt";
 
 // Reads the simple mapping of camera names from the text file.
-const cameraNames = Object.assign({},
-    ...(existsSync(nameFile) ? readFileSync(nameFile, "utf8") : "").toString()
-    .replace(/\r\n/g, "\n").split("\n")
-    .filter(l => !l.startsWith("#"))
-    .filter(l => l.trim() != "")
-    .map(l => { let kv = l.split("="); return ({ [kv[0]]: kv[1] }); }));
+const cameraNames = Object.assign(
+  {},
+  ...(existsSync(nameFile) ? readFileSync(nameFile, "utf8") : "")
+    .toString()
+    .replace(/\r\n/g, "\n")
+    .split("\n")
+    .filter((l) => !l.startsWith("#"))
+    .filter((l) => l.trim() != "")
+    .map((l) => {
+      let kv = l.split("=");
+      return { [kv[0]]: kv[1] };
+    }),
+);
 
 // Returns the camera name (custom name, if it exists, otherwise its ID).
 const cameraName = (id: string): string => cameraNames[id] || id;
-
-// Page's favicon.
-const favicon = readFileSync("cam.ico.gz");
 
 // The HTTP server.
 export const serveHttp = (opts: opt, port: number, with_audio: boolean) => {
@@ -45,11 +54,11 @@ export const serveHttp = (opts: opt, port: number, with_audio: boolean) => {
         res.end("Nothing online");
         return;
       }
-      const ui = readFileSync("asd.html").toString()
-          .replace(/\${id}/g, devId)
-          .replace(/\${name}/g, cameraName(devId))
-          .replace(/\${audio}/g, with_audio.toString())
-          .replace(/\${debug}/g, opts.debug.toString());
+      const ui = html_template
+        .toString()
+        .replace(/\${id}/g, devId)
+        .replace(/\${name}/g, cameraName(devId))
+        .replace(/\${audio}/g, with_audio.toString());
       res.end(ui);
       return;
     }

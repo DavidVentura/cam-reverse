@@ -3,13 +3,13 @@
   "scripts": {
     "test": "mocha tests",
     "tsc": "tsc",
-    "build": "esbuild cmd/bin.ts  --bundle --platform=node --outfile=dist/bin.cjs --target=node12"
+    "build": "esbuild cmd/bin.ts  --bundle --platform=node --outfile=dist/bin.cjs --target=node12 --loader:.gz=binary --loader:.html=text"
   },
   "devDependencies": {
     "@types/yargs": "^17.0.32",
+    "esbuild": "^0.20.2",
     "mocha": "^10.2.0",
     "ts-node": "^10.9.2",
-    "esbuild": "^0.20.2",
     "typescript": "^5.3.3"
   },
   "dependencies": {
