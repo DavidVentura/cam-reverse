@@ -65,13 +65,14 @@ function ilnk_proto.dissector(buffer, pinfo, tree)
 
 	-- Set the protocol description in the packet list
 	pinfo.cols.protocol:set("iLnkP2P")
+	pinfo.cols.info:set(packetname)
 	if packetname == "PunchPkt" or packetname == "P2pRdy" then
 		local len = buffer(2, 2)
 		subtree:add(ilnk_proto.fields.len, len)
 		local serial_prefix = buffer(4, 4):string()
 		local serial_no = UInt64(buffer(12, 4):uint(), buffer(8, 4):uint())
 		local serial_suffix = buffer(16, 5):string()
-		subtree:add(ilnk_proto.fields.serial, serial_prefix..serial_no..serial_suffix)
+		subtree:add(ilnk_proto.fields.serial, buffer(4, len:uint()-3), serial_prefix..serial_no..serial_suffix)
 	end
 	if packetname == "DrwAck" then
 		subtree:add(ilnk_proto.fields.len, buffer(2, 2))
