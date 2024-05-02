@@ -6,6 +6,14 @@ Re-implementation of the "iLnk"/"iLnkP2P"/"PPPP" protocol used on some cheap (\<
 
 Per pictures of the [X5](https://github.com/DavidVentura/cam-reverse/blob/master/pics/pcb.jpg?raw=true), [A9](https://github.com/DavidVentura/cam-reverse/blob/master/pics/pcb_a9.jpg?raw=true) the main chip is TXW817 ([chinese](https://www.taixin-semi.com/Product/ProductDetail?productId=306), [eng, google translate](https://www-taixin--semi-com.translate.goog/Product/ProductDetail?productId=306&_x_tr_sl=auto&_x_tr_tl=en&_x_tr_hl=en&_x_tr_pto=wapp))
 
+## Features
+
+- Multi camera support
+- Audio & video streaming
+- Rotation / mirroring of video streams
+- Friendly names for cameras
+- Ability to configure "blank" cameras with Wifi settings
+
 ## Building
 
 Run `make build` or `npm run build` to build the server artifact. You can also find some pre-built files [in the CI results](https://github.com/DavidVentura/cam-reverse/actions) or [in the releases](https://github.com/DavidVentura/cam-reverse/releases/)
