@@ -86,7 +86,7 @@ export const serveHttp = (opts: opt, port: number, with_audio: boolean) => {
     if (req.url.startsWith("/favicon.ico")) {
       res.setHeader("Content-Type", "image/x-icon");
       res.setHeader("Content-Encoding", "gzip");
-      res.end(favicon);
+      res.end(Buffer.from(favicon));
       return;
     }
 
