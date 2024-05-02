@@ -26,6 +26,7 @@ ilnk_proto.fields.payload_len 		= ProtoField.uint32("iLnkP2P.payload_len", "Payl
 ilnk_proto.fields.frame_no 			= ProtoField.uint32("iLnkP2P.frame_no", "Frame no")
 -- audio
 ilnk_proto.fields.audio_header 		= ProtoField.bytes("iLnkP2P.audio_header", "Audio Header")
+ilnk_proto.fields.hdr_type 			= ProtoField.uint16("iLnkP2P.hdr_type", "Header Type")
 ilnk_proto.fields.hdr_streamid 		= ProtoField.uint16("iLnkP2P.hdr_streamid", "Header Stream ID")
 ilnk_proto.fields.hdr_frameno 		= ProtoField.uint32("iLnkP2P.hdr_frameno", "Header Frame")
 ilnk_proto.fields.hdr_len 			= ProtoField.uint16("iLnkP2P.hdr_len", "Header Len")
@@ -164,7 +165,9 @@ function ilnk_proto.dissector(buffer, pinfo, tree)
 			if payload_tvb:range(0, 4):uint() == 0x55aa15a8 then
 				payload_type = "audio"
 				subtree:add(ilnk_proto.fields.audio_header, buffer(8, 32))
+				subtree:add(ilnk_proto.fields.hdr_type, buffer(12, 1))
 				subtree:add(ilnk_proto.fields.hdr_streamid, buffer(13, 1))
+
 				subtree:add(ilnk_proto.fields.hdr_frameno, buffer(20, 4), buffer(20, 4):le_uint())
 				subtree:add(ilnk_proto.fields.hdr_len, buffer(24, 4), buffer(24, 4):le_uint())
 				subtree:add(ilnk_proto.fields.hdr_ver, buffer(28, 1), buffer(28, 1):le_uint())
