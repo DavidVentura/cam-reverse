@@ -123,21 +123,28 @@ export const createResponseForControlCommand = (session: Session, dv: DataView):
 
 const deal_with_data = (session: Session, dv: DataView) => {
   const pkt_len = dv.add(2).readU16();
-  // data
-  const JPEG_HEADER = [0xff, 0xd8, 0xff, 0xdb];
-  const AUDIO_HEADER = [0x55, 0xaa, 0x15, 0xa8];
+  const FRAME_HEADER = [0x55, 0xaa, 0x15, 0xa8];
   const m_hdr = dv.add(8).readByteArray(4);
-  let is_new_image = true;
-  let audio = true;
   const pkt_id = dv.add(6).readU16();
-  for (let i = 0; i < 4; i++) {
-    is_new_image = is_new_image && m_hdr.add(i).readU8() == JPEG_HEADER[i];
-    audio = audio && m_hdr.add(i).readU8() == AUDIO_HEADER[i];
-  }
+  const STREAM_TYPE_AUDIO = 0x06;
+  const STREAM_TYPE_JPEG = 0x03;
 
-  if (audio) {
-    // "stream_head_t->type == 0x06" per pdf
-    if (dv.add(12).readU8() == 0x06) {
+  const startNewFrame = (buf: ArrayBuffer) => {
+    if (session.curImage.length > 0 && !session.frame_is_bad) {
+      session.eventEmitter.emit("frame");
+    }
+
+    session.frame_was_fixed = false;
+    session.frame_is_bad = false;
+    session.curImage = [Buffer.from(buf)];
+    session.rcvSeqId = pkt_id;
+  };
+
+  let is_framed = m_hdr.startsWith(FRAME_HEADER);
+
+  if (is_framed) {
+    const stream_type = dv.add(12).readU8();
+    if (stream_type == STREAM_TYPE_AUDIO) {
       const audio_len = u16_swap(dv.add(8 + 16).readU16());
       // may have received the next 'data' packet id as an audio frame -- jpeg was fine
       if (pkt_id == session.rcvSeqId + 1) {
@@ -145,20 +152,34 @@ const deal_with_data = (session: Session, dv: DataView) => {
       }
       const audio_buf = dv.add(32 + 8).readByteArray(audio_len).buffer; // 8 for pkt header, 32 for `stream_head_t`
       session.eventEmitter.emit("audio", { gap: false, data: Buffer.from(audio_buf) });
+      // type 3 = jpg
+    } else if (stream_type == STREAM_TYPE_JPEG) {
+      // skip 8 bytes (drw header) + 32 bytes (data frame)
+      const to_read = pkt_len - 4 - 32;
+      if (to_read > 0) {
+        // some cameras do not send the data with the frame, but rather
+        // as a followup message
+        logger.debug(`Reading ${to_read} bytes - should be 992?`);
+        const data = dv.add(32 + 8).readByteArray(to_read);
+        startNewFrame(data.buffer);
+      }
     } else {
+      logger.debug(`Ignoring data frame with stream type ${stream_type} - not implemented`);
       // not sure what these are for, there's one per frame. maybe alignment?
     }
   } else {
+    const JPEG_HEADER = [0xff, 0xd8, 0xff, 0xdb];
+    // a new JPEG image may begin either
+    // - as a frame with stream_type == 0x03
+    // - as unframed data, started by JPEG_HEADER
+    // but for both types of cameras, unframed data which does not start with JPEG_HEADER
+    // are segments of the (potentially already started) JPEG image
     const data = dv.add(8).readByteArray(pkt_len - 4);
-    if (is_new_image) {
-      if (session.curImage.length > 0 && !session.frame_is_bad) {
-        session.eventEmitter.emit("frame");
-      }
+    // this only happens on un-framed-cameras, which start the JPEG image directly
+    let is_new_image = m_hdr.startsWith(JPEG_HEADER);
 
-      session.frame_was_fixed = false;
-      session.frame_is_bad = false;
-      session.curImage = [Buffer.from(data.buffer)];
-      session.rcvSeqId = pkt_id;
+    if (is_new_image) {
+      startNewFrame(data.buffer);
     } else {
       if (pkt_id <= session.rcvSeqId) {
         // retransmit
