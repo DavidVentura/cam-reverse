@@ -104,14 +104,14 @@ export const serveHttp = (opts: opt, port: number, with_audio: boolean) => {
       let devId = req.url.split("/")[2];
       let curPos = camSettings[devId]?.orientation || 0;
       let nextPos = (curPos + 1) % 4;
-      logger.info(`Rotating ${devId} to ${nextPos}`);
+      logger.debug(`Rotating ${devId} to ${nextPos}`);
       camSettings[devId].orientation = nextPos;
       res.writeHead(204);
       res.end();
       return;
     } else if (req.url.startsWith("/mirror/")) {
       let devId = req.url.split("/")[2];
-      logger.info(`Mirroring ${devId}`);
+      logger.debug(`Mirroring ${devId}`);
       camSettings[devId].mirror = !camSettings[devId].mirror;
       res.writeHead(204);
       res.end();
