@@ -20,6 +20,12 @@ ilnk_proto.fields.auth_token 		= ProtoField.bytes("iLnkP2P.auth_token", "CMD aut
 ilnk_proto.fields.cmd_payload 		= ProtoField.bytes("iLnkP2P.payload", "CMD Payload", base.DASH)
 -- jpeg | audio | continuation type?
 ilnk_proto.fields.data_payload 		= ProtoField.bytes("iLnkP2P.data_payload", "Data Payload", base.DASH)
+ilnk_proto.fields.payload_type 		= ProtoField.string("iLnkP2P.payload_type", "Payload type")
+ilnk_proto.fields.payload_subtype 	= ProtoField.string("iLnkP2P.payload_type", "Payload type")
+ilnk_proto.fields.payload_len 		= ProtoField.uint32("iLnkP2P.payload_len", "Payload len")
+ilnk_proto.fields.frame_no 			= ProtoField.uint32("iLnkP2P.frame_no", "Frame no")
+-- audio
+ilnk_proto.fields.audio_header 		= ProtoField.bytes("iLnkP2P.audio_header", "Audio Header")
 
 ilnk_proto.fields.encrypted 		= ProtoField.bool("iLnkP2P.encrypted", "Encrypted")
 ilnk_proto.fields.cmd_type 		= ProtoField.string("iLnkP2P.cmd_type", "Cmd Pkt Type")
@@ -137,7 +143,31 @@ function ilnk_proto.dissector(buffer, pinfo, tree)
 				subtree:add(ilnk_proto.fields.cmd_payload, payload_tvb:range(0, payload_len -4))
 			end
 		else
+			local payload_type
+			local payload_subtype
 			local payload_tvb = ByteArray.tvb(buffer(8, packet_length-8):bytes(), "Data Payload")
+			if payload_tvb:range(0, 4):uint() == 0xffd8ffdb then
+				payload_subtype = "new frame"
+				-- start of new frame
+			end
+			if payload_tvb:range(0, 4):uint() == 0x55aa15a8 then
+				payload_type = "audio"
+				subtree:add(ilnk_proto.fields.audio_header, buffer(8, 32))
+				subtree:add(ilnk_proto.fields.payload_len, buffer(24, 4), buffer(24, 4):le_uint())
+				subtree:add(ilnk_proto.fields.frame_no, buffer(20, 4), buffer(20, 4):le_uint())
+				if payload_tvb:range(4, 1):uint() == 0x06 then
+					payload_subtype = "audio data"
+				elseif payload_tvb:range(4, 1):uint() == 0x03 then
+					payload_subtype = "maybe audio metadata"
+				else
+					payload_subtype = "REALLY not sure audio data"
+				end
+			else
+				payload_type = "jpeg"
+				payload_subtype = "jpeg continuation"
+			end
+			subtree:add(ilnk_proto.fields.payload_type, buffer(8, 4), payload_type)
+			subtree:add(ilnk_proto.fields.payload_subtype, buffer(12, 1), payload_subtype)
 			subtree:add(ilnk_proto.fields.data_payload, payload_tvb:range(0, packet_length-8))
 		end
 	end
