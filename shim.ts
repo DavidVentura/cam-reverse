@@ -59,6 +59,17 @@ DataView.prototype.writeString = function (str) {
   const bytes = [...str].map((_, i) => str.charCodeAt(i));
   return this.writeByteArray(bytes);
 };
+DataView.prototype.startsWith = function (arr) {
+  if (this.byteLength < arr.length) {
+    return false;
+  }
+  for (let i = 0; i < arr.length; i++) {
+    if (this.add(i).readU8() != arr[i]) {
+      return false;
+    }
+  }
+  return true;
+};
 
 declare global {
   interface DataView {
@@ -77,6 +88,7 @@ declare global {
     writeU32(n: number): void;
     writeU64(n: bigint): void;
     writeU8(n: number): void;
+    startsWith(arr: number[]): boolean;
   }
 }
 export default global;
