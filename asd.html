@@ -3,8 +3,10 @@
 	<link rel="shortcut icon" href="/favicon.ico">
 	<title>${name}</title>
 	</head><body>
-	<h2>${name}</h2><a href="/camera/${id}"><img src="/camera/${id}"/></a><hr/>
+	<h2>${name}</h2><a href="/camera/${id}"><img style="height: 640px" src="/camera/${id}"/></a><hr/>
 	<button onclick="toggle_audio()" id=audio disabled=true>Audio: disabled</button>
+	<button onclick="fetch('/rotate/${id}')">Rotate</button>
+	<button onclick="fetch('/mirror/${id}')">Mirror</button>
 	<script>
 	const alaw_to_s16_table = [
 	  -5504, -5248, -6016, -5760, -4480, -4224, -4992, -4736, -7552, -7296, -8064, -7808, -6528, -6272, -7040, -6784, -2752,
@@ -49,13 +51,11 @@
 		audio_context.resume();
 
 		const evtSource = new EventSource("/audio/${id}");
-		if (${debug}) {
-			evtSource.onopen = (e) => {
-				console.log("evtsource open");
-			}
-			evtSource.onerror = (e) => {
-				console.log("evtsource error", e);
-			}
+		evtSource.onopen = (e) => {
+			console.log("evtsource open");
+		}
+		evtSource.onerror = (e) => {
+			console.log("evtsource error", e);
 		}
 		let endsAt = 0;
 		let startAt = 0;
