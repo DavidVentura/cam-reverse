@@ -60,23 +60,11 @@ export const makeSession = (
   sock.on("message", (msg, rinfo) => handleIncoming(session, handlers, msg, rinfo));
 
   sock.on("listening", () => {
-    const startup = () => {
-      const buf = makeP2pRdy(dev);
-      session.send(buf);
-      // The YsxLite sends a P2PAlive message immediately after P2PRdy
-      const alive_buf = create_P2pAlive();
-      session.send(alive_buf);
-      session.started = true;
-    };
-    if (options.slow_startup) {
-      logger.info("Delaying session startup");
-      setTimeout(startup, 6500);
-    } else {
-      startup();
-    }
+    const buf = makeP2pRdy(dev);
+    session.send(buf);
+    session.started = true;
   });
 
-  const SEND_PORT = 32108;
   sock.bind();
   const sessTimer = setInterval(() => {
     const delta = Date.now() - session.lastReceivedPacket;
