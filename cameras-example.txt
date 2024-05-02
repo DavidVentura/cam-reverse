@@ -1,0 +1,10 @@
+# This is a simple name mapping for cameras, in the form
+#
+# CAMERA_ID=descriptive name
+#
+# Blank lines and lines starting with "#" are ignored.
+#
+# Any updates to this file require restarting the HTTP server.
+# This file is meant to be updated manually, it is NOT updated dynamically.
+
+FTYC811847AGFDZ=Office camera
