@@ -241,8 +241,10 @@ export const handle_Drw = (session: Session, dv: DataView) => {
   const m_stream = dv.add(5).readU8(); // data = 1, control = 0
   if (m_stream == 1) {
     deal_with_data(session, dv);
-  } else {
+  } else if (m_stream == 0) {
     const b = createResponseForControlCommand(session, dv);
     b.forEach(session.send);
+  } else {
+    logger.warning(`Received a Drw packet with stream tag: ${m_stream}, which is not implemented`);
   }
 };
