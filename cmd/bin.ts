@@ -1,3 +1,4 @@
+import process from "node:process";
 import { hideBin } from "yargs/helpers";
 import yargs from "yargs/yargs";
 
@@ -5,7 +6,9 @@ import { serveHttp } from "../http_server.js";
 import { opt } from "../options.js";
 import { pair } from "../pair.js";
 
-import { buildLogger } from "../logger.js";
+import { buildLogger, logger } from "../logger.js";
+
+const majorVersion = process.versions.node.split(".").map(Number)[0];
 
 yargs(hideBin(process.argv))
   .command(
@@ -28,6 +31,9 @@ yargs(hideBin(process.argv))
     (argv) => {
       const opts: opt = argv as opt;
       buildLogger(argv.log_level, argv.color);
+      if (majorVersion < 16) {
+        logger.error(`Node version ${majorVersion} is not supported, may malfunction`);
+      }
       serveHttp(opts, argv.port, argv.audio || false);
     },
   )
@@ -51,6 +57,9 @@ yargs(hideBin(process.argv))
     (argv) => {
       const opts: opt = argv as unknown as opt;
       buildLogger(argv.log_level, argv.color);
+      if (majorVersion < 16) {
+        logger.error(`Node version ${majorVersion} is not supported, may malfunction`);
+      }
       pair({ opts, ssid: argv.ssid, password: argv.password });
     },
   )

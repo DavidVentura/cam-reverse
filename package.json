@@ -15,5 +15,8 @@
   "dependencies": {
     "winston": "^3.13.0",
     "yargs": "^17.7.2"
+  },
+  "engines": {
+	  "node": ">=16.0"
   }
 }
