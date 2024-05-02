@@ -2,7 +2,7 @@ import { RemoteInfo } from "dgram";
 
 import { opt } from "./options.js";
 import { discoverDevices } from "./discovery.js";
-import { DevSerial } from "./impl.js";
+import { DevSerial, SendReboot } from "./impl.js";
 import { Handlers, makeSession, Session, configureWifi } from "./session.js";
 import { logger } from "./logger.js";
 
@@ -17,7 +17,8 @@ export const pair = ({ opts, ssid, password }: { opts: opt; ssid: string; passwo
 
   const onLogin = (s: Session) => {
     configureWifi(ssid, password)(s);
-    logger.info(`WiFi config for camera ${s.devName} is done`);
+    logger.info(`WiFi config for camera ${s.devName} is done, asking to reboot`);
+    s.send(SendReboot(s));
   };
 
   devEv.on("discover", (rinfo: RemoteInfo, dev: DevSerial) => {
