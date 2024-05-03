@@ -152,14 +152,13 @@ const deal_with_data = (session: Session, dv: DataView) => {
       }
       const audio_buf = dv.add(32 + 8).readByteArray(audio_len).buffer; // 8 for pkt header, 32 for `stream_head_t`
       session.eventEmitter.emit("audio", { gap: false, data: Buffer.from(audio_buf) });
-      // type 3 = jpg
     } else if (stream_type == STREAM_TYPE_JPEG) {
-      // skip 8 bytes (drw header) + 32 bytes (data frame)
       const to_read = pkt_len - 4 - 32;
       if (to_read > 0) {
         // some cameras do not send the data with the frame, but rather
         // as a followup message
         logger.debug(`Reading ${to_read} bytes - should be 992?`);
+        // skip 8 bytes (drw header) + 32 bytes (data frame)
         const data = dv.add(32 + 8).readByteArray(to_read);
         startNewFrame(data.buffer);
       }
