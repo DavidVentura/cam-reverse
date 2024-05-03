@@ -93,9 +93,12 @@ export const createResponseForControlCommand = (session: Session, dv: DataView):
       return [buf];
 
     case ControlCommands.ListWifiAck:
+      if (payload_len == 4) {
+        logger.debug("ListWifi returned []");
+        return [];
+      }
       let startat = 0x10;
       let msg_len = 91;
-      logger.debug("payload len", payload_len);
       let msg_count = (payload_len - 9) / msg_len;
       let remote_msg_count = dv.add(startat).readU32LE();
       logger.debug(`should get messages: ${msg_count} in payload: ${remote_msg_count}`);
