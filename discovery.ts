@@ -1,7 +1,8 @@
-import EventEmitter from "node:events";
-import { create_LanSearchExt, create_LanSearch, parse_PunchPkt } from "./impl.js";
 import { createSocket, RemoteInfo } from "node:dgram";
+import EventEmitter from "node:events";
+
 import { Commands } from "./datatypes.js";
+import { create_LanSearch, parse_PunchPkt } from "./impl.js";
 import { logger } from "./logger.js";
 
 const handleIncomingPunch = (msg: Buffer, ee: EventEmitter, rinfo: RemoteInfo) => {
@@ -27,20 +28,24 @@ export const discoverDevices = (discovery_ip: string): EventEmitter => {
 
   sock.on("message", (msg, rinfo) => handleIncomingPunch(msg, ee, rinfo));
 
+  let timers = [];
   sock.on("listening", () => {
     sock.setBroadcast(true);
     logger.info(`Searching for devices on ${discovery_ip}`);
 
     let ls_buf = create_LanSearch();
-    setInterval(() => {
+    let int = setInterval(() => {
       logger.log("trace", `>> LanSearch`);
       sock.send(new Uint8Array(ls_buf.buffer), SEND_PORT, discovery_ip);
     }, 3000);
+    timers.push(int);
     logger.log("trace", `>> LanSearch`);
     sock.send(new Uint8Array(ls_buf.buffer), SEND_PORT, discovery_ip);
   });
 
   sock.bind();
 
+  sock.on("close", () => timers.forEach((timer) => clearInterval(timer)));
+  ee.on("close", () => sock.close());
   return ee;
 };
