@@ -32,17 +32,12 @@ export const discoverDevices = (discovery_ip: string): EventEmitter => {
     logger.info(`Searching for devices on ${discovery_ip}`);
 
     let ls_buf = create_LanSearch();
-    let lse_buf = create_LanSearchExt();
     setInterval(() => {
       logger.log("trace", `>> LanSearch`);
       sock.send(new Uint8Array(ls_buf.buffer), SEND_PORT, discovery_ip);
-      logger.log("trace", `>> LanSearchExt`);
-      sock.send(new Uint8Array(lse_buf.buffer), SEND_PORT, discovery_ip);
-    }, 2000);
+    }, 3000);
     logger.log("trace", `>> LanSearch`);
     sock.send(new Uint8Array(ls_buf.buffer), SEND_PORT, discovery_ip);
-    logger.log("trace", `>> LanSearchExt`);
-    sock.send(new Uint8Array(lse_buf.buffer), SEND_PORT, discovery_ip);
   });
 
   sock.bind();
