@@ -23,7 +23,7 @@ node_modules:
 	npm install
 
 test: node_modules
-	./node_modules/.bin/mocha --require ts-node/register  tests/fn.test.js
+	npm run test
 
 install-wireshark-dissector:
 	mkdir -p ~/.local/lib/wireshark/plugins
