@@ -91,7 +91,7 @@ export const makeSession = (
     send: (msg: DataView) => {
       const raw = msg.readU16();
       const cmd = CommandsByValue[raw];
-      logger.log("trace", `>> ${cmd} (${ra.port})`);
+      logger.log("trace", `>> ${cmd}`);
       sock.send(new Uint8Array(msg.buffer), ra.port, session.dst_ip);
     },
     dst_ip: ra.address,
