@@ -2,9 +2,9 @@ import "../shim.ts";
 
 import assert from "assert";
 
-import { XqBytesDec, XqBytesEnc } from "../func_replacements.js";
 import { hexdump } from "../hexdump.js";
-import { SendStartVideo, SendDevStatus, SendUsrChk, SendWifiDetails, parse_PunchPkt } from "../impl.ts";
+import { XqBytesDec, XqBytesEnc } from "../func_replacements.js";
+import { parse_PunchPkt, SendDevStatus, SendStartVideo, SendUsrChk, SendWifiDetails } from "../impl.ts";
 import { placeholderTypes, sprintf } from "../utils.js";
 
 describe("debug_tools", () => {
@@ -122,11 +122,6 @@ describe("module", () => {
 });
 
 const hstrToBA = (hs) => new Uint8Array(hs.match(/../g).map((h) => parseInt(h, 16))).buffer;
-describe("events", () => {
-  it("emits login event upon logging in", () => {
-    // TODO
-  });
-});
 describe("parse packet", () => {
   it("parses PunchPkt", () => {
     const in_pkt_str = "f14100144241544400000000000262ca574f4e4a4d000000";
