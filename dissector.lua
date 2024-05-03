@@ -18,6 +18,8 @@ ilnk_proto.fields.start 			= ProtoField.uint16("iLnkP2P.start", "Start", base.HE
 ilnk_proto.fields.cmd_dest 		= ProtoField.uint16("iLnkP2P.cmd_dest", "Dest", base.HEX)
 ilnk_proto.fields.auth_token 		= ProtoField.bytes("iLnkP2P.auth_token", "CMD auth token", base.DASH)
 ilnk_proto.fields.cmd_payload 		= ProtoField.bytes("iLnkP2P.payload", "CMD Payload", base.DASH)
+ilnk_proto.fields.warning 			= ProtoField.string("iLnkP2P.warning", "Warning")
+--
 -- jpeg | audio | continuation type?
 ilnk_proto.fields.data_payload 		= ProtoField.bytes("iLnkP2P.data_payload", "Data Payload", base.DASH)
 ilnk_proto.fields.payload_type 		= ProtoField.string("iLnkP2P.payload_type", "Payload type")
@@ -106,7 +108,12 @@ function ilnk_proto.dissector(buffer, pinfo, tree)
 		subtree:add(ilnk_proto.fields.len, b_pkt_len)
 		subtree:add(ilnk_proto.fields.m_type, buffer(4, 1))
 		subtree:add(ilnk_proto.fields.m_stream_id, buffer(5, 1))
+		if pkt_len < 12 then
+			subtree:add(ilnk_proto.fields.warning, "Short read"):set_generated()
+			return
+		end
 		subtree:add(ilnk_proto.fields.pkt_seq, buffer(6, 2))
+		pinfo.cols.info:set(buffer(6, 2):uint())
 		local b_payload_len = buffer(0xc, 2)
 		local payload_len = buffer(0xc, 2):le_uint()
 

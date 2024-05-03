@@ -135,6 +135,13 @@ export const createResponseForControlCommand = (session: Session, dv: DataView):
 
 const deal_with_data = (session: Session, dv: DataView) => {
   const pkt_len = dv.add(2).readU16();
+
+  // 12 equals start of header (0x8) + header length (0x4)
+  if (pkt_len < 12) {
+    logger.debug("Got a short Drw packet, ignoring");
+    return;
+  }
+
   const FRAME_HEADER = [0x55, 0xaa, 0x15, 0xa8];
   const m_hdr = dv.add(8).readByteArray(4);
   const pkt_id = dv.add(6).readU16();
