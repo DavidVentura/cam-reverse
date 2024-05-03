@@ -2,13 +2,15 @@ import { createSocket, RemoteInfo } from "node:dgram";
 import EventEmitter from "node:events";
 
 import { Commands, CommandsByValue } from "./datatypes.js";
-import { handle_Drw, handle_P2PAlive, handle_P2PRdy, makeP2pRdy, noop, notImpl } from "./handlers.js";
+import { handle_Drw, handle_DrwAck, handle_P2PAlive, handle_P2PRdy, makeP2pRdy, notImpl, noop } from "./handlers.js";
 import { create_P2pAlive, DevSerial, SendStartVideo, SendVideoResolution, SendWifiDetails } from "./impl.js";
 import { opt } from "./options.js";
 import { logger } from "./logger.js";
 
 export type Session = {
   send: (msg: DataView) => void;
+  ackDrw: (id: number) => void;
+  unackedDrw: { [id: number]: { sent_ts: number; data: DataView } };
   outgoingCommandId: number;
   ticket: number[];
   eventEmitter: EventEmitter;
@@ -37,7 +39,8 @@ type msgCb = (
 const handleIncoming: msgCb = (session, handlers, msg, rinfo) => {
   const ab = new Uint8Array(msg).buffer;
   const dv = new DataView(ab);
-  const cmd = CommandsByValue[dv.readU16()];
+  const raw = dv.readU16();
+  const cmd = CommandsByValue[raw];
   logger.log("trace", `<< ${cmd}`);
   handlers[cmd](session, dv, rinfo);
   session.lastReceivedPacket = Date.now();
@@ -50,6 +53,7 @@ export const makeSession = (
   onLogin: (s: Session) => void,
   options: opt,
 ): Session => {
+  let unackedDrw = {};
   const sock = createSocket("udp4");
 
   sock.on("error", (err) => {
@@ -73,11 +77,26 @@ export const makeSession = (
         let buf = create_P2pAlive();
         session.send(buf);
       }
-      if (delta > 8000) {
+      if (delta > 5000) {
         session.eventEmitter.emit("disconnect");
       }
     }
   }, 400);
+
+  const resendTimer = setInterval(() => {
+    const now = Date.now();
+    for (const [key, value] of Object.entries(session.unackedDrw)) {
+      const { sent_ts, data } = value;
+      if (now - sent_ts > 100) {
+        const pkt_id = data.add(6).readU16();
+        logger.debug(`Resending packet ${pkt_id} as ${session.outgoingCommandId}`);
+        data.add(6).writeU16(session.outgoingCommandId);
+        session.outgoingCommandId++;
+        delete session.unackedDrw[key];
+        session.send(data);
+      }
+    }
+  }, 500);
 
   const session: Session = {
     outgoingCommandId: 0,
@@ -85,14 +104,24 @@ export const makeSession = (
     lastReceivedPacket: 0,
     eventEmitter: new EventEmitter(),
     connected: true,
-    timers: [sessTimer],
+    timers: [sessTimer, resendTimer],
     devName: dev.devId,
     started: false,
     send: (msg: DataView) => {
       const raw = msg.readU16();
       const cmd = CommandsByValue[raw];
+      // send command
+      if (raw == 0xf1d0 && msg.add(4).readU8() == 0xd1) {
+        const packet_id = msg.add(6).readU16();
+        logger.debug(`Sending Drw Packet with id ${packet_id}`);
+        unackedDrw[packet_id] = { sent_ts: Date.now(), data: msg };
+      }
       logger.log("trace", `>> ${cmd}`);
       sock.send(new Uint8Array(msg.buffer), ra.port, session.dst_ip);
+    },
+    ackDrw: (id: number) => {
+      logger.debug(`Removing ${id} from pending`);
+      delete unackedDrw[id];
     },
     dst_ip: ra.address,
     curImage: [],
@@ -100,6 +129,7 @@ export const makeSession = (
     frame_is_bad: false,
     frame_was_fixed: false,
     options: options,
+    unackedDrw,
   };
 
   session.eventEmitter.on("disconnect", () => {
@@ -134,13 +164,13 @@ export const Handlers: Record<keyof typeof Commands, PacketHandler> = {
   PunchPkt: notImpl,
   P2PAlive: handle_P2PAlive,
   P2pRdy: handle_P2PRdy,
-  DrwAck: noop,
+  DrwAck: handle_DrwAck,
   Drw: handle_Drw,
 
+  P2PAliveAck: noop,
   Close: notImpl,
   LanSearchExt: notImpl,
   LanSearch: notImpl,
-  P2PAliveAck: notImpl,
   Hello: notImpl,
   P2pReq: notImpl,
   LstReq: notImpl,

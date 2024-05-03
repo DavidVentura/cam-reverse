@@ -266,6 +266,17 @@ const makeDrwAck = (dv: DataView): DataView => {
   }
   return outbuf;
 };
+
+export const handle_DrwAck = (session: Session, dv: DataView) => {
+  const packetlen = dv.add(2).readU16();
+  const str_type = dv.add(4).readU8();
+  const str_id = dv.add(5).readU8();
+  const ack_count = dv.add(6).readU16();
+  for (let i = 0; i < ack_count; i++) {
+    const ack_id = dv.add(8 + i * 2).readU16();
+    session.ackDrw(ack_id);
+  }
+};
 export const handle_Drw = (session: Session, dv: DataView) => {
   const ack = makeDrwAck(dv);
   session.send(ack);
