@@ -4,6 +4,7 @@ import { create_P2pRdy, SendListWifi, SendUsrChk, DevSerial } from "./impl.js";
 import { Session } from "./session.js";
 import { u16_swap, u32_swap } from "./utils.js";
 import { logger } from "./logger.js";
+import { hexdump } from "./hexdump.js";
 
 export const notImpl = (session: Session, dv: DataView) => {
   const raw = dv.readU16();
@@ -54,69 +55,77 @@ export const createResponseForControlCommand = (session: Session, dv: DataView):
     XqBytesDec(dv.add(20), payload_len - 4, rotate_chr);
   }
 
-  if (cmd_id == ControlCommands.ConnectUserAck) {
-    let c = new Uint8Array(dv.add(0x18).readByteArray(4).buffer);
-    session.ticket = [...c];
-    session.eventEmitter.emit("login");
-    return [];
-  }
+  switch (cmd_id) {
+    case ControlCommands.ConnectUserAck:
+      let c = new Uint8Array(dv.add(0x18).readByteArray(4).buffer);
+      session.ticket = [...c];
+      session.eventEmitter.emit("login");
+      return [];
 
-  if (cmd_id == ControlCommands.DevStatusAck) {
-    // ParseDevStatus -> offset relevant?
-    let charging = u32_swap(dv.add(0x28).readU32()) & 1 ? "" : "not "; // 0x14000101 v 0x14000100
-    let power = u16_swap(dv.add(0x18).readU16()); // '3730' or '3765', milliVolts
-    let dbm = dv.add(0x24).readU8() - 0x100; // 0xbf - 0x100 = -65dbm .. constant??
-    // > -50 = excellent, -50 to -60 good, -60 to -70 fair, <-70 weak
+    case ControlCommands.DevStatusAck:
+      // ParseDevStatus -> offset relevant?
+      let charging = u32_swap(dv.add(0x28).readU32()) & 1 ? "" : "not "; // 0x14000101 v 0x14000100
+      let power = u16_swap(dv.add(0x18).readU16()); // '3730' or '3765', milliVolts
+      let dbm = dv.add(0x24).readU8() - 0x100; // 0xbf - 0x100 = -65dbm .. constant??
+      // > -50 = excellent, -50 to -60 good, -60 to -70 fair, <-70 weak
 
-    logger.info(`Camera ${session.devName}: ${charging}charging, battery at ${power / 1000}V, Wifi ${dbm} dBm`);
-  }
+      logger.info(`Camera ${session.devName}: ${charging}charging, battery at ${power / 1000}V, Wifi ${dbm} dBm`);
+      return [];
 
-  if (cmd_id == ControlCommands.WifiSettingsAck) {
-    const wifiSettings = {
-      enable: dv.add(0x14).readU32(),
-      status: dv.add(0x18).readU32(),
-      mode: dv.add(0x1c).readU32LE(),
-      channel: dv.add(0x20).readU32(),
-      authtype: dv.add(0x24).readU32(),
-      dhcp: dv.add(0x28).readU32(),
-      ssid: dv.add(0x2c).readString(0x20),
-      psk: dv.add(0x4c).readString(0x80),
-      ip: dv.add(0xcc).readString(0x10),
-      mask: dv.add(0xdc).readString(0x10),
-      gw: dv.add(0xec).readString(0x10),
-      dns1: dv.add(0xfc).readString(0x10),
-      dns2: dv.add(0x10c).readString(0x10),
-    };
-    const buf = SendListWifi(session);
-    logger.info(`Current Wifi settings: ${JSON.stringify(wifiSettings, null, 2)}`);
-    return [buf];
-  }
-
-  if (cmd_id == ControlCommands.ListWifiAck) {
-    let startat = 0x10;
-    let msg_len = 91;
-    logger.debug("payload len", payload_len);
-    let msg_count = (payload_len - 9) / msg_len;
-    let remote_msg_count = dv.add(startat).readU32LE();
-    logger.debug("should get messages:", msg_count, "in payload: ", remote_msg_count);
-    startat += 4;
-    let items = [];
-    for (let i = 0; i < msg_count; i++) {
-      const wifiListItem = {
-        // startat = msg_len * i + 0x14;
-        ssid: dv.add(startat).readString(0x40),
-        mac: dv.add(startat + 0x40).readByteArray(8),
-        security: dv.add(startat + 0x48).readU32LE(),
-        dbm0: dv.add(startat + 0x4c).readU32LE(),
-        dbm1: dv.add(startat + 0x50).readU32LE(),
-        mode: dv.add(startat + 0x54).readU32LE(),
-        channel: dv.add(startat + 0x58).readU32LE(),
+    case ControlCommands.WifiSettingsAck:
+      const wifiSettings = {
+        enable: dv.add(0x14).readU32(),
+        status: dv.add(0x18).readU32(),
+        mode: dv.add(0x1c).readU32LE(),
+        channel: dv.add(0x20).readU32(),
+        authtype: dv.add(0x24).readU32(),
+        dhcp: dv.add(0x28).readU32(),
+        ssid: dv.add(0x2c).readString(0x20),
+        psk: dv.add(0x4c).readString(0x80),
+        ip: dv.add(0xcc).readString(0x10),
+        mask: dv.add(0xdc).readString(0x10),
+        gw: dv.add(0xec).readString(0x10),
+        dns1: dv.add(0xfc).readString(0x10),
+        dns2: dv.add(0x10c).readString(0x10),
       };
-      logger.info(`Wifi Item: ${JSON.stringify(wifiListItem, null, 2)}`);
-      startat += msg_len;
-      logger.debug("ended at", startat);
-      items.push(wifiListItem);
-    }
+      const buf = SendListWifi(session);
+      logger.info(`Current Wifi settings: ${JSON.stringify(wifiSettings, null, 2)}`);
+      return [buf];
+
+    case ControlCommands.ListWifiAck:
+      let startat = 0x10;
+      let msg_len = 91;
+      logger.debug("payload len", payload_len);
+      let msg_count = (payload_len - 9) / msg_len;
+      let remote_msg_count = dv.add(startat).readU32LE();
+      logger.debug(`should get messages: ${msg_count} in payload: ${remote_msg_count}`);
+      startat += 4;
+      let items = [];
+      for (let i = 0; i < msg_count; i++) {
+        const wifiListItem = {
+          // startat = msg_len * i + 0x14;
+          ssid: dv.add(startat).readString(0x40),
+          mac: dv.add(startat + 0x40).readByteArray(8),
+          security: dv.add(startat + 0x48).readU32LE(),
+          dbm0: dv.add(startat + 0x4c).readU32LE(),
+          dbm1: dv.add(startat + 0x50).readU32LE(),
+          mode: dv.add(startat + 0x54).readU32LE(),
+          channel: dv.add(startat + 0x58).readU32LE(),
+        };
+        logger.info(`Wifi Item: ${JSON.stringify(wifiListItem, null, 2)}`);
+        startat += msg_len;
+        logger.debug("ended at", startat);
+        items.push(wifiListItem);
+      }
+      return [];
+    case ControlCommands.StartVideoAck:
+      logger.debug("Start video ack");
+      return [];
+    case ControlCommands.VideoParamSetAck:
+      logger.debug("Video param set ack");
+      return [];
+    default:
+      logger.info(`Unhandled control command: 0x${cmd_id.toString(16)}`);
   }
   return [];
 };
