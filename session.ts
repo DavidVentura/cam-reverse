@@ -43,7 +43,9 @@ const handleIncoming: msgCb = (session, handlers, msg, rinfo) => {
   const cmd = CommandsByValue[raw];
   logger.log("trace", `<< ${cmd}`);
   handlers[cmd](session, dv, rinfo);
-  session.lastReceivedPacket = Date.now();
+  if (raw != Commands.P2PAlive && raw != Commands.P2PAliveAck) {
+    session.lastReceivedPacket = Date.now();
+  }
 };
 
 export const makeSession = (
