@@ -1,16 +1,16 @@
 import { RemoteInfo } from "dgram";
 
-import { opt } from "./options.js";
+import { config } from "./settings.js";
 import { discoverDevices } from "./discovery.js";
 import { DevSerial, SendReboot, SendWifiSettings } from "./impl.js";
 import { Handlers, makeSession, Session, configureWifi } from "./session.js";
 import { logger } from "./logger.js";
 
-export const pair = ({ opts, ssid, password }: { opts: opt; ssid: string; password: string }) => {
+export const pair = ({ ssid, password }: { ssid: string; password: string }) => {
   logger.info(`Will configure any devices found to join ${ssid}`);
   let sessions: Record<string, Session> = {};
 
-  let devEv = discoverDevices(opts.discovery_ip);
+  let devEv = discoverDevices(config.discovery_ips);
   if (password == "") {
     throw new Error("You must set a non-zero-length password");
   }
@@ -33,7 +33,7 @@ export const pair = ({ opts, ssid, password }: { opts: opt; ssid: string; passwo
       return;
     }
     logger.info(`Discovered camera ${dev.devId} at ${rinfo.address}`);
-    const s = makeSession(Handlers, dev, rinfo, onLogin, opts);
+    const s = makeSession(Handlers, dev, rinfo, onLogin);
 
     s.eventEmitter.on("disconnect", () => {
       logger.info(`Camera ${dev.devId} disconnected`);

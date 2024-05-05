@@ -5,6 +5,7 @@ import { Session } from "./session.js";
 import { u16_swap, u32_swap } from "./utils.js";
 import { logger } from "./logger.js";
 import { hexdump } from "./hexdump.js";
+import { config } from "./settings.js";
 
 export const notImpl = (session: Session, dv: DataView) => {
   const raw = dv.readU16();
@@ -207,7 +208,7 @@ const deal_with_data = (session: Session, dv: DataView) => {
         }
         // this should always be enabled but currently it seems to cause more visual distortion
         // than just missing some frames
-        if (!session.options.attempt_to_fix_packet_loss) {
+        if (!config.cameras[session.devName].fix_packet_loss) {
           return;
         }
 

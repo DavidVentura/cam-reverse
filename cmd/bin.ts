@@ -3,8 +3,8 @@ import { hideBin } from "yargs/helpers";
 import yargs from "yargs/yargs";
 
 import { serveHttp } from "../http_server.js";
-import { opt } from "../options.js";
 import { pair } from "../pair.js";
+import { loadConfig, config } from "../settings.js";
 
 import { buildLogger, logger } from "../logger.js";
 
@@ -16,23 +16,38 @@ yargs(hideBin(process.argv))
     "start http server",
     (yargs) => {
       return yargs
-        .option("audio", { describe: "Also stream audio from camera", default: true })
-        .option("color", { describe: "Use color in logs", default: undefined })
+        .option("color", { describe: "Use color in logs" })
         .boolean(["audio", "color"])
-        .option("log_level", { describe: "Set log level", default: "info" })
-        .option("discovery_ip", { describe: "Camera discovery IP address", default: "192.168.1.255" })
-        .option("attempt_to_fix_packet_loss", { default: false })
-        .option("port", { describe: "HTTP Port to listen on", default: 5000 })
+        .option("config_file", { describe: "Specify config file" })
+        .option("log_level", { describe: "Set log level" })
+        .option("discovery_ip", { describe: "Camera discovery IP address" })
+        .option("port", { describe: "HTTP Port to listen on" })
+        .string(["log_level", "discovery_ip", "config_file"])
         .number(["port"])
         .strict();
     },
     (argv) => {
-      const opts: opt = argv as opt;
-      buildLogger(argv.log_level, argv.color);
+      if (argv.config_file !== undefined) {
+        loadConfig(argv.config_file);
+      }
+      if (argv.port) {
+        config.http_server.port = argv.port;
+      }
+      if (argv.color !== undefined) {
+        config.logging.use_color = argv.color;
+      }
+      if (argv.log_level !== undefined) {
+        config.logging.level = argv.log_level;
+      }
+      if (argv.discovery_ip !== undefined) {
+        config.discovery_ips = [argv.discovery_ip];
+      }
+
+      buildLogger(config.logging.level, config.logging.use_color);
       if (majorVersion < 16) {
         logger.error(`Node version ${majorVersion} is not supported, may malfunction`);
       }
-      serveHttp(opts, argv.port, argv.audio || false);
+      serveHttp(config.http_server.port);
     },
   )
   .command(
@@ -40,23 +55,19 @@ yargs(hideBin(process.argv))
     "configure a camera",
     (yargs) => {
       return yargs
-        .option("color", { describe: "Use color in logs", default: undefined })
-        .boolean(["color"])
         .option("log_level", { describe: "Set log level", default: "info" })
         .option("discovery_ip", { describe: "Camera discovery IP address", default: "192.168.1.255" })
-        .option("attempt_to_fix_packet_loss", { default: false })
         .option("ssid", { describe: "Wifi network for the camera to connect to" })
         .option("password", { describe: "Wifi network password" })
         .demandOption(["ssid", "password"])
         .string(["ssid", "password"]);
     },
     (argv) => {
-      const opts: opt = argv as unknown as opt;
-      buildLogger(argv.log_level, argv.color);
+      buildLogger(argv.log_level, undefined);
       if (majorVersion < 16) {
         logger.error(`Node version ${majorVersion} is not supported, may malfunction`);
       }
-      pair({ opts, ssid: argv.ssid, password: argv.password });
+      pair({ ssid: argv.ssid, password: argv.password });
     },
   )
   .demandCommand()

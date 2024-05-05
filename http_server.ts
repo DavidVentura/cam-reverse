@@ -1,9 +1,8 @@
 import { RemoteInfo } from "dgram";
-import { readFileSync, existsSync } from "node:fs";
 import http from "node:http";
 
 import { logger } from "./logger.js";
-import { opt } from "./options.js";
+import { config } from "./settings.js";
 import { discoverDevices } from "./discovery.js";
 import { DevSerial, SendDevStatus } from "./impl.js";
 import { Handlers, makeSession, Session, startVideoStream } from "./session.js";
@@ -19,9 +18,6 @@ const responses: Record<string, http.ServerResponse[]> = {};
 const audioResponses: Record<string, http.ServerResponse[]> = {};
 const sessions: Record<string, Session> = {};
 
-// Text file containing the mapping of camera names.
-const nameFile = "cameras.txt";
-
 // https://sirv.com/help/articles/rotate-photos-to-be-upright/
 const oMap = [1, 8, 3, 6];
 const oMapMirror = [2, 7, 4, 5];
@@ -29,29 +25,13 @@ const orientations = [1, 2, 3, 4, 5, 6, 7, 8].reduce((acc, cur) => {
   return { [cur]: createExifOrientation(cur), ...acc };
 }, {});
 
-let camSettings: { [key: string]: { orientation: number; mirror: boolean } } = {};
-
 // Reads the mapping of serial numbers to camera names from the text file.
-const cameraNames = Object.assign(
-  {},
-  ...(existsSync(nameFile) ? readFileSync(nameFile, "utf8") : "")
-    .toString()
-    .replace(/\r\n/g, "\n")
-    .split("\n")
-    .filter((l) => !l.startsWith("#"))
-    .filter((l) => l.trim() != "")
-    .map((l) => {
-      let kv = l.split("=");
-      return { [kv[0].trim()]: kv[1].trim() };
-    }),
-);
 
 // Returns the camera name (custom name, if it exists, otherwise its ID).
-const cameraName = (id: string): string => cameraNames[id] || id;
+const cameraName = (id: string): string => config.cameras[id].alias || id;
 
 // The HTTP server.
-export const serveHttp = (opts: opt, port: number, with_audio: boolean) => {
-  logger.info(`Mapping camera names: ${JSON.stringify(cameraNames)}`);
+export const serveHttp = (port: number) => {
   const server = http.createServer((req, res) => {
     if (req.url.startsWith("/ui/")) {
       let devId = req.url.split("/")[2];
@@ -70,7 +50,7 @@ export const serveHttp = (opts: opt, port: number, with_audio: boolean) => {
         .toString()
         .replace(/\${id}/g, devId)
         .replace(/\${name}/g, cameraName(devId))
-        .replace(/\${audio}/g, with_audio.toString());
+        .replace(/\${audio}/g, config.cameras[devId].audio ? "true" : "false");
       res.end(ui);
       return;
     }
@@ -102,17 +82,17 @@ export const serveHttp = (opts: opt, port: number, with_audio: boolean) => {
 
     if (req.url.startsWith("/rotate/")) {
       let devId = req.url.split("/")[2];
-      let curPos = camSettings[devId]?.orientation || 0;
+      let curPos = config.cameras[devId]?.rotate || 0;
       let nextPos = (curPos + 1) % 4;
       logger.debug(`Rotating ${devId} to ${nextPos}`);
-      camSettings[devId].orientation = nextPos;
+      config.cameras[devId].rotate = nextPos;
       res.writeHead(204);
       res.end();
       return;
     } else if (req.url.startsWith("/mirror/")) {
       let devId = req.url.split("/")[2];
       logger.debug(`Mirroring ${devId}`);
-      camSettings[devId].mirror = !camSettings[devId].mirror;
+      config.cameras[devId].mirror = !config.cameras[devId].mirror;
       res.writeHead(204);
       res.end();
       return;
@@ -155,7 +135,7 @@ export const serveHttp = (opts: opt, port: number, with_audio: boolean) => {
     }
   });
 
-  let devEv = discoverDevices(opts.discovery_ip);
+  let devEv = discoverDevices(config.discovery_ips);
 
   const startSession = (s: Session) => {
     s.send(SendDevStatus(s));
@@ -172,14 +152,14 @@ export const serveHttp = (opts: opt, port: number, with_audio: boolean) => {
     logger.info(`Discovered camera ${dev.devId} at ${rinfo.address}`);
     responses[dev.devId] = [];
     audioResponses[dev.devId] = [];
-    const s = makeSession(Handlers, dev, rinfo, startSession, opts);
+    const s = makeSession(Handlers, dev, rinfo, startSession);
 
     const header = Buffer.from(`--${BOUNDARY}\r\nContent-Type: image/jpeg\r\n\r\n`);
 
     s.eventEmitter.on("frame", () => {
       // Add an EXIF header to indicate if the image should be rotated or mirrored
-      let orientation = camSettings[dev.devId].orientation;
-      orientation = camSettings[dev.devId].mirror ? oMapMirror[orientation] : oMap[orientation];
+      let orientation = config.cameras[dev.devId].rotate;
+      orientation = config.cameras[dev.devId].mirror ? oMapMirror[orientation] : oMap[orientation];
       const exifSegment = orientations[orientation];
       const jpegHeader = addExifToJpeg(s.curImage[0], exifSegment);
       const assembled = Buffer.concat([jpegHeader, ...s.curImage.slice(1)]);
@@ -193,7 +173,7 @@ export const serveHttp = (opts: opt, port: number, with_audio: boolean) => {
       logger.info(`Camera ${dev.devId} disconnected`);
       delete sessions[dev.devId];
     });
-    if (with_audio) {
+    if (config.cameras[dev.devId].audio) {
       s.eventEmitter.on("audio", ({ gap, data }) => {
         // ew, maybe WS?
         var b64encoded = Buffer.from(data).toString("base64");
@@ -205,7 +185,7 @@ export const serveHttp = (opts: opt, port: number, with_audio: boolean) => {
       });
     }
     sessions[dev.devId] = s;
-    camSettings[dev.devId] = { orientation: 0, mirror: false };
+    config.cameras[dev.devId] = { rotate: 0, mirror: false, ...(config.cameras[dev.devId] || {}) };
   });
 
   logger.info(`Starting HTTP server on port ${port}`);

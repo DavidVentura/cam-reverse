@@ -35,11 +35,54 @@ There's a basic UI which can display multiple cameras:
 
 ![](pics/web-ui.jpg?raw=true)
 
-The server will send a broadcast packet every few seconds to discover all the cameras available; this means that it *must* run in the same broadcast domain (VLAN) as your cameras. For debugging purposes, you can send the packets to a specific camera by setting `--discovery_ip` to its IP address.
-
 Clicking on the image will take you to a page that has audio streaming. Click the button below the image to mute/unmute the audio.
 
-To customize the camera names, edit the file `cameras.txt` and add the names of your cameras, one per line, in the format `CAMERA_ID=descriptive name` (you must restart the HTTP server for the changes to take effect).
+
+## Settings
+
+You can provide a config file in `yml` format, check `config.example.yml` for an updated example:
+
+```yml
+http_server:
+  port: 5000
+
+logging:
+  level: debug
+  use_color: true
+
+cameras:
+  FTYC477360FAWUK:
+    alias: "A9"
+    rotate: 1
+    mirror: false
+    fix_packet_loss: yes
+    audio: true
+  BATC609531EXLVS:
+    alias: "X5"
+
+# If you are crossing broadcast domains (VLANs) then
+# you need to specify all IPs as unicast targets
+discovery_ips:
+  - 192.168.40.101
+  - 192.168.40.102
+  - 192.168.40.103
+  - 192.168.40.104
+  - 192.168.40.105
+
+# If you are in the same broadcast domain, then
+# it's easier to just use the broadcast address of your network
+# discovery_ips:
+#   - 192.168.1.255
+
+blacklisted_ips:
+  - 192.168.40.102
+```
+
+All keys are optional
+
+You must restart the HTTP server for changes to the settings file to take effect.
+
+----
 
 ## Protocol
 

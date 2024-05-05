@@ -4,7 +4,6 @@ import EventEmitter from "node:events";
 import { Commands, CommandsByValue } from "./datatypes.js";
 import { handle_Drw, handle_DrwAck, handle_P2PAlive, handle_P2PRdy, makeP2pRdy, notImpl, noop } from "./handlers.js";
 import { create_P2pAlive, DevSerial, SendStartVideo, SendVideoResolution, SendWifiDetails } from "./impl.js";
-import { opt } from "./options.js";
 import { logger } from "./logger.js";
 
 export type Session = {
@@ -24,7 +23,6 @@ export type Session = {
   frame_is_bad: boolean;
   frame_was_fixed: boolean;
   started: boolean;
-  options: opt;
 };
 
 export type PacketHandler = (session: Session, dv: DataView, rinfo: RemoteInfo) => void;
@@ -53,7 +51,6 @@ export const makeSession = (
   dev: DevSerial,
   ra: RemoteInfo,
   onLogin: (s: Session) => void,
-  options: opt,
 ): Session => {
   let unackedDrw = {};
   const sock = createSocket("udp4");
@@ -130,7 +127,6 @@ export const makeSession = (
     rcvSeqId: 0,
     frame_is_bad: false,
     frame_was_fixed: false,
-    options: options,
     unackedDrw,
   };
 

@@ -1,0 +1,33 @@
+http_server:
+  port: 5000
+
+logging:
+  level: debug
+  use_color: true
+
+cameras:
+  FTYC477360FAWUK:
+    alias: "A9"
+    rotate: 1
+    mirror: false
+    fix_packet_loss: yes
+    audio: true
+  BATC609531EXLVS:
+    alias: "X5"
+
+# If you are crossing broadcast domains (VLANs) then
+# you need to specify all IPs as unicast targets
+discovery_ips:
+  - 192.168.40.101
+  - 192.168.40.102
+  - 192.168.40.103
+  - 192.168.40.104
+  - 192.168.40.105
+
+# If you are in the same broadcast domain, then
+# it's easier to just use the broadcast address of your network
+# discovery_ips:
+#   - 192.168.1.255
+
+blacklisted_ips:
+  - 192.168.40.102

@@ -20,7 +20,7 @@ describe("integration", () => {
       }
       return [];
     });
-    const ev = discoverDevices("127.0.0.1");
+    const ev = discoverDevices(["127.0.0.1"]);
     ev.on("discover", (rinfo, dev) => {
       assert.deepEqual(dev.devId, EXPECTED_SERIAL);
       ev.emit("close");
