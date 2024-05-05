@@ -4,7 +4,6 @@ import { create_P2pRdy, SendListWifi, SendUsrChk, DevSerial } from "./impl.js";
 import { Session } from "./session.js";
 import { u16_swap, u32_swap } from "./utils.js";
 import { logger } from "./logger.js";
-import { hexdump } from "./hexdump.js";
 import { config } from "./settings.js";
 
 export const notImpl = (session: Session, dv: DataView) => {
@@ -33,11 +32,13 @@ export const handle_P2PRdy = (session: Session, _: DataView) => {
 };
 
 export const makeP2pRdy = (dev: DevSerial): DataView => {
-  const len = dev.prefix.length + dev.suffix.length + 8;
   const outbuf = new DataView(new Uint8Array(0x14).buffer); // 8 = serial u64
+  // The protocol seems to expect 4 bytes -- check the regression test
+  // `replies properly to PunchPkt with 3-letters-long prefix` for a case with a real device
+  const devPrefixLength = 4;
   outbuf.add(0).writeString(dev.prefix);
   outbuf.add(4).writeU64(dev.serialU64);
-  outbuf.add(8 + dev.prefix.length).writeString(dev.suffix);
+  outbuf.add(8 + devPrefixLength).writeString(dev.suffix);
   return create_P2pRdy(outbuf);
 };
 

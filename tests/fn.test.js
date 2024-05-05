@@ -2,7 +2,7 @@ import "../shim.ts";
 
 import assert from "assert";
 
-import { hexdump } from "../hexdump.js";
+import { makeP2pRdy } from "../handlers.js";
 import { XqBytesDec, XqBytesEnc } from "../func_replacements.js";
 import { parse_PunchPkt, SendDevStatus, SendStartVideo, SendUsrChk, SendWifiDetails } from "../impl.ts";
 import { placeholderTypes, sprintf } from "../utils.js";
@@ -122,6 +122,7 @@ describe("module", () => {
 });
 
 const hstrToBA = (hs) => new Uint8Array(hs.match(/../g).map((h) => parseInt(h, 16))).buffer;
+const BATohstr = (ba) => [...new Uint8Array(ba.buffer)].map((b) => b.toString(16).padStart(2, "0")).join("");
 describe("parse packet", () => {
   it("parses PunchPkt", () => {
     const in_pkt_str = "f14100144241544400000000000262ca574f4e4a4d000000";
@@ -136,6 +137,28 @@ describe("parse packet", () => {
 
     assert.deepEqual(parse_PunchPkt(pkt), expected);
   });
+  {
+    const in_pkt_str = "f14100145848410000000000000003e24b4d4d4542000000";
+    const pkt = new DataView(hstrToBA(in_pkt_str));
+    it("parses PunchPkt when prefix is 3 letters long", () => {
+      const expected = {
+        prefix: "XHA",
+        serial: "994",
+        suffix: "KMMEB",
+        serialU64: BigInt(994),
+        devId: "XHA994KMMEB",
+      };
+      assert.deepEqual(parse_PunchPkt(pkt), expected);
+    });
+    // https://github.com/DavidVentura/cam-reverse/issues/17#issuecomment-2094819873
+    it("replies properly to PunchPkt with 3-letters-long prefix", () => {
+      const dev = parse_PunchPkt(pkt);
+      const p2prdy = makeP2pRdy(dev);
+      let p2pstr = BATohstr(p2prdy);
+
+      assert.deepEqual(in_pkt_str.slice(8), p2pstr.slice(8));
+    });
+  }
 });
 describe("make packet", () => {
   it("builds a good SendUsrChk", () => {
