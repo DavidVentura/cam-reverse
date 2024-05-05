@@ -16,10 +16,9 @@ yargs(hideBin(process.argv))
     "start http server",
     (yargs) => {
       return yargs
-        .option("ansi", { default: false })
         .option("audio", { describe: "Also stream audio from camera", default: true })
         .option("color", { describe: "Use color in logs", default: undefined })
-        .boolean(["ansi", "audio", "color"])
+        .boolean(["audio", "color"])
         .option("log_level", { describe: "Set log level", default: "info" })
         .option("discovery_ip", { describe: "Camera discovery IP address", default: "192.168.1.255" })
         .option("attempt_to_fix_packet_loss", { default: false })
@@ -41,9 +40,8 @@ yargs(hideBin(process.argv))
     "configure a camera",
     (yargs) => {
       return yargs
-        .option("ansi", { default: false })
         .option("color", { describe: "Use color in logs", default: undefined })
-        .boolean(["ansi", "color"])
+        .boolean(["color"])
         .option("log_level", { describe: "Set log level", default: "info" })
         .option("discovery_ip", { describe: "Camera discovery IP address", default: "192.168.1.255" })
         .option("attempt_to_fix_packet_loss", { default: false })
