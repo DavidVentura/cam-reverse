@@ -411,6 +411,9 @@ function ilnk_proto.dissector(buffer, pinfo, tree)
 		subtree:add(ilnk_proto.fields.pkt_seq, buffer(6, 2))
 		local b_payload_len = buffer(0xc, 2)
 		local payload_len = buffer(0xc, 2):le_uint()
+		if payload_len > pkt_len then
+			payload_len = pkt_len - 12
+		end
 
 		if not is_data_packet then
 			subtree:add_le(ilnk_proto.fields.start, buffer(8, 2))
