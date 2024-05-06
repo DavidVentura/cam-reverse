@@ -45,7 +45,11 @@ export const makeP2pRdy = (dev: DevSerial): DataView => {
 export const createResponseForControlCommand = (session: Session, dv: DataView): DataView[] => {
   const start_type = dv.add(8).readU16(); // 0xa11 on control; data starts here on DATA pkt
   const cmd_id = dv.add(10).readU16(); // 0x1120
-  const payload_len = u16_swap(dv.add(0xc).readU16());
+  let payload_len = u16_swap(dv.add(0xc).readU16());
+  if (dv.byteLength > 20 && payload_len > dv.byteLength) {
+    logger.warning(`Received a cropped payload: ${payload_len} when packet is ${dv.byteLength}`);
+    payload_len = dv.byteLength - 20;
+  }
 
   if (start_type != 0x110a) {
     logger.error(`Expected start_type to be 0xa11, got 0x${start_type.toString(16)}`);
@@ -99,27 +103,31 @@ export const createResponseForControlCommand = (session: Session, dv: DataView):
         logger.debug("ListWifi returned []");
         return [];
       }
+      logger.log("trace", `payload len ${dv.byteLength}`);
       let startat = 0x10;
-      let msg_len = 91;
-      let msg_count = (payload_len - 9) / msg_len;
-      let remote_msg_count = dv.add(startat).readU32LE();
-      logger.debug(`should get messages: ${msg_count} in payload: ${remote_msg_count}`);
+      const msg_len = 0x5c; // 0x58 + 0x4 of the last u32
+      const msg_count = dv.add(startat).readU32LE();
+      logger.log("trace", `should get messages: ${msg_count} in payload`);
       startat += 4;
       let items = [];
       for (let i = 0; i < msg_count; i++) {
+        logger.log("trace", `start parsing ${i} at ${startat} - 0x${startat.toString(16)}`);
+        if (startat + msg_len > dv.byteLength) {
+          logger.warning("Wifi listing got cropped");
+          break;
+        }
         const wifiListItem = {
-          // startat = msg_len * i + 0x14;
           ssid: dv.add(startat).readString(0x40),
-          mac: dv.add(startat + 0x40).readByteArray(8),
+          mac: dv.add(startat + 0x40).readByteArray(8).buffer,
           security: dv.add(startat + 0x48).readU32LE(),
           dbm0: dv.add(startat + 0x4c).readU32LE(),
           dbm1: dv.add(startat + 0x50).readU32LE(),
           mode: dv.add(startat + 0x54).readU32LE(),
           channel: dv.add(startat + 0x58).readU32LE(),
         };
-        logger.info(`Wifi Item: ${JSON.stringify(wifiListItem, null, 2)}`);
+        logger.debug(`Wifi Item: ${JSON.stringify(wifiListItem, null, 2)}`);
         startat += msg_len;
-        logger.debug("ended at", startat);
+        logger.log("trace", `ended at ${startat} - 0x${startat.toString(16)}`);
         items.push(wifiListItem);
       }
       return [];
