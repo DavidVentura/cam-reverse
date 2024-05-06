@@ -140,7 +140,7 @@ const deal_with_data = (session: Session, dv: DataView) => {
 
   // 12 equals start of header (0x8) + header length (0x4)
   if (pkt_len < 12) {
-    logger.debug("Got a short Drw packet, ignoring");
+    logger.log("trace", "Got a short Drw packet, ignoring");
     return;
   }
 
