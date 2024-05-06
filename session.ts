@@ -87,6 +87,7 @@ export const makeSession = (
         session.send(buf);
       }
       if (delta > 5000) {
+        logger.warning(`Camera ${session.devName} timed out`);
         session.eventEmitter.emit("disconnect");
       }
     }
