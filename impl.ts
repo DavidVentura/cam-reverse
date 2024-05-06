@@ -132,11 +132,13 @@ export const SendWifiDetails = (session: Session, ssid: string, password: string
   let m_dns1 = "0.0.0.0";
   let m_dns2 = "0.0.0.0";
 
-  cmd_payload.add(0x14).writeU8(1); // DHCP ?
+  // tag_wifiParams in types/all.h
+  cmd_payload.add(0x10).writeU8(0); // TODO: AUTH
+  cmd_payload.add(0x14).writeU8(1); // DHCP
   cmd_payload.add(0x18).writeByteArray(str2byte(ssid));
   cmd_payload.add(0x38).writeByteArray(str2byte(password));
-  cmd_payload.add(0xb8).writeByteArray(str2byte(mask_reversed));
-  cmd_payload.add(0xc8).writeByteArray(str2byte(m_ip));
+  cmd_payload.add(0xb8).writeByteArray(str2byte(m_ip));
+  cmd_payload.add(0xc8).writeByteArray(str2byte(mask_reversed));
   cmd_payload.add(0xd8).writeByteArray(str2byte(m_gw));
   cmd_payload.add(0xe8).writeByteArray(str2byte(m_dns1));
   cmd_payload.add(0xf8).writeByteArray(str2byte(m_dns2));
