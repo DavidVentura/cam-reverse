@@ -297,3 +297,9 @@ export const handle_Drw = (session: Session, dv: DataView) => {
     logger.warning(`Received a Drw packet with stream tag: ${m_stream}, which is not implemented`);
   }
 };
+export const handle_Close = (session: Session, dv: DataView) => {
+  const ack = makeDrwAck(dv);
+  session.send(ack);
+  logger.info("Requested to close connection");
+  session.close();
+};

@@ -2,7 +2,16 @@ import { createSocket, RemoteInfo } from "node:dgram";
 import EventEmitter from "node:events";
 
 import { Commands, CommandsByValue } from "./datatypes.js";
-import { handle_Drw, handle_DrwAck, handle_P2PAlive, handle_P2PRdy, makeP2pRdy, notImpl, noop } from "./handlers.js";
+import {
+  handle_Close,
+  handle_Drw,
+  handle_DrwAck,
+  handle_P2PAlive,
+  handle_P2PRdy,
+  makeP2pRdy,
+  notImpl,
+  noop,
+} from "./handlers.js";
 import { create_P2pAlive, DevSerial, SendStartVideo, SendVideoResolution, SendWifiDetails } from "./impl.js";
 import { logger } from "./logger.js";
 
@@ -23,6 +32,7 @@ export type Session = {
   frame_is_bad: boolean;
   frame_was_fixed: boolean;
   started: boolean;
+  close: () => void;
 };
 
 export type PacketHandler = (session: Session, dv: DataView, rinfo: RemoteInfo) => void;
@@ -128,6 +138,9 @@ export const makeSession = (
     frame_is_bad: false,
     frame_was_fixed: false,
     unackedDrw,
+    close: () => {
+      session.eventEmitter.emit("disconnect");
+    },
   };
 
   session.eventEmitter.on("disconnect", () => {
@@ -136,6 +149,7 @@ export const makeSession = (
     session.connected = false;
     session.timers.forEach((x) => clearInterval(x));
     session.timers = [];
+    sock.close();
   });
 
   session.eventEmitter.on("login", () => {
@@ -164,9 +178,9 @@ export const Handlers: Record<keyof typeof Commands, PacketHandler> = {
   P2pRdy: handle_P2PRdy,
   DrwAck: handle_DrwAck,
   Drw: handle_Drw,
+  Close: handle_Close,
 
   P2PAliveAck: noop,
-  Close: notImpl,
   LanSearchExt: notImpl,
   LanSearch: notImpl,
   Hello: notImpl,
