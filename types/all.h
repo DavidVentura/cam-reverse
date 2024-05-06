@@ -2,6 +2,7 @@ struct avparamset_t {
 	uint32_t paramType;
 	uint32_t paramValue;
 };
+
 struct datetime_t {
 	uint32_t now; // the code to _write_ these uses long ))
 	uint32_t tz;
@@ -99,3 +100,21 @@ struct stream_head_t {
 	short sample;
 	short index;
 };
+
+
+struct tag_wifiParams { /* PlaceHolder Structure */
+    int enable;
+    int noidea;
+    int mode;
+    int chan;
+    int auth;
+    int dhcp;
+    char ssid[32];
+    char psk[128];
+    char ip[16];
+    char mask[16];
+    char gw[16];
+    char dns1[16];
+    char dns2[16];
+};
+
