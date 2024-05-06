@@ -153,6 +153,8 @@ export const serveHttp = (port: number) => {
     responses[dev.devId] = [];
     audioResponses[dev.devId] = [];
     const s = makeSession(Handlers, dev, rinfo, startSession);
+    sessions[dev.devId] = s;
+    config.cameras[dev.devId] = { rotate: 0, mirror: false, audio: true, ...(config.cameras[dev.devId] || {}) };
 
     const header = Buffer.from(`--${BOUNDARY}\r\nContent-Type: image/jpeg\r\n\r\n`);
 
@@ -184,8 +186,6 @@ export const serveHttp = (port: number) => {
         });
       });
     }
-    sessions[dev.devId] = s;
-    config.cameras[dev.devId] = { rotate: 0, mirror: false, ...(config.cameras[dev.devId] || {}) };
   });
 
   logger.info(`Starting HTTP server on port ${port}`);
