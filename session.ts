@@ -86,7 +86,8 @@ export const makeSession = (
         let buf = create_P2pAlive();
         session.send(buf);
       }
-      if (delta > 5000) {
+      if (delta > 9000) {
+        // should depend on whether we are streaming video
         logger.warning(`Camera ${session.devName} timed out`);
         session.eventEmitter.emit("disconnect");
       }
