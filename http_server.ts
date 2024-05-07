@@ -4,7 +4,7 @@ import http from "node:http";
 import { logger } from "./logger.js";
 import { config } from "./settings.js";
 import { discoverDevices } from "./discovery.js";
-import { DevSerial, SendDevStatus } from "./impl.js";
+import { DevSerial } from "./impl.js";
 import { Handlers, makeSession, Session, startVideoStream } from "./session.js";
 import { addExifToJpeg, createExifOrientation } from "./exif.js";
 
@@ -138,7 +138,6 @@ export const serveHttp = (port: number) => {
   let devEv = discoverDevices(config.discovery_ips);
 
   const startSession = (s: Session) => {
-    s.send(SendDevStatus(s));
     startVideoStream(s);
     logger.info(`Camera ${s.devName} is now ready to stream`);
   };
@@ -152,7 +151,7 @@ export const serveHttp = (port: number) => {
     logger.info(`Discovered camera ${dev.devId} at ${rinfo.address}`);
     responses[dev.devId] = [];
     audioResponses[dev.devId] = [];
-    const s = makeSession(Handlers, dev, rinfo, startSession);
+    const s = makeSession(Handlers, dev, rinfo, startSession, 5000);
     sessions[dev.devId] = s;
     config.cameras[dev.devId] = { rotate: 0, mirror: false, audio: true, ...(config.cameras[dev.devId] || {}) };
 

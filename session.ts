@@ -61,6 +61,7 @@ export const makeSession = (
   dev: DevSerial,
   ra: RemoteInfo,
   onLogin: (s: Session) => void,
+  timeoutMs: number,
 ): Session => {
   let unackedDrw = {};
   const sock = createSocket("udp4");
@@ -86,8 +87,7 @@ export const makeSession = (
         let buf = create_P2pAlive();
         session.send(buf);
       }
-      if (delta > 9000) {
-        // should depend on whether we are streaming video
+      if (delta > timeoutMs) {
         logger.warning(`Camera ${session.devName} timed out`);
         session.eventEmitter.emit("disconnect");
       }
@@ -161,9 +161,9 @@ export const makeSession = (
   return session;
 };
 
-export const configureWifi = (ssid: string, password: string) => {
+export const configureWifi = (ssid: string, password: string, channel: number) => {
   return (s: Session) => {
-    [SendWifiDetails(s, ssid, password, true)].forEach(s.send);
+    [SendWifiDetails(s, ssid, password, channel, true)].forEach(s.send);
   };
 };
 
