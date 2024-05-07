@@ -3,6 +3,7 @@ import "../shim.ts";
 
 import assert from "assert";
 
+import { hexdump } from "../hexdump.js";
 import { XqBytesDec, XqBytesEnc } from "../func_replacements.js";
 import { makeP2pRdy, parseListWifi } from "../handlers.js";
 import { parse_PunchPkt, SendDevStatus, SendStartVideo, SendUsrChk, SendWifiDetails } from "../impl.ts";
@@ -259,7 +260,16 @@ describe("make packet", () => {
       "01010101"; // 0000
     const expected = hstrToBA(_expected_str);
 
-    const got = SendWifiDetails(sess, "skynet", "supercrap", true);
+    const got = SendWifiDetails(sess, "skynet", "supercrap", 0, true);
+    assert.deepEqual(got.buffer, expected);
+  });
+  it("builds a good WifiSettingsSet - with channel", () => {
+    const sess = { outgoingCommandId: 0xc, ticket: [0x30, 0x35, 0x74, 0x72] };
+    const _expected_str =
+      "f1d00118d100000c110a01600c010000303574720101010101010101030101010101010100010101404253422f4f445501010101010101010101010101010101010101010101010167606a6471607272010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101312f312f312f31010101010101010101312f3334342f3334342f333434010101312f312f312f31010101010101010101312f312f312f31010101010101010101312f312f312f3101010101010101010101010101";
+    const expected = hstrToBA(_expected_str);
+
+    const got = SendWifiDetails(sess, "ACRC.NET", "fakepass", 2, true);
     assert.deepEqual(got.buffer, expected);
   });
 });
