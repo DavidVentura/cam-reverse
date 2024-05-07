@@ -122,6 +122,7 @@ export const createResponseForControlCommand = (session: Session, dv: DataView):
         return [];
       }
       const items = parseListWifi(dv);
+      session.eventEmitter.emit("ListWifi", items);
       return [];
     case ControlCommands.StartVideoAck:
       logger.debug("Start video ack");
@@ -135,7 +136,7 @@ export const createResponseForControlCommand = (session: Session, dv: DataView):
   return [];
 };
 
-type WifiListItem = {
+export type WifiListItem = {
   ssid: string;
   mac: string;
   security: number;
@@ -146,15 +147,12 @@ type WifiListItem = {
 };
 
 export const parseListWifi = (dv: DataView): WifiListItem[] => {
-  logger.log("trace", `payload len ${dv.byteLength}`);
   let startat = 0x10;
   const msg_len = 0x5c; // 0x58 + 0x4 of the last u32
   const msg_count = dv.add(startat).readU32LE();
-  logger.log("trace", `should get messages: ${msg_count} in payload`);
   startat += 4;
   let items = [];
   for (let i = 0; i < msg_count; i++) {
-    logger.log("trace", `start parsing ${i} at ${startat} - 0x${startat.toString(16)}`);
     if (startat + msg_len > dv.byteLength) {
       logger.warning("Wifi listing got cropped");
       break;
@@ -170,9 +168,7 @@ export const parseListWifi = (dv: DataView): WifiListItem[] => {
       mode: dv.add(startat + 0x54).readU32LE(),
       channel: dv.add(startat + 0x58).readU32LE(),
     };
-    logger.debug(`Wifi Item: ${JSON.stringify(wifiListItem, null, 2)}`);
     startat += msg_len;
-    logger.log("trace", `ended at ${startat} - 0x${startat.toString(16)}`);
     items.push(wifiListItem);
   }
   return items;
