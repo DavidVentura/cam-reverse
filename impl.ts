@@ -119,7 +119,13 @@ export const SendReboot = (session: Session): DataView => {
   return makeDataReadWrite(session, ControlCommands.Reboot, dv);
 };
 
-export const SendWifiDetails = (session: Session, ssid: string, password: string, dhcp: boolean): DataView => {
+export const SendWifiDetails = (
+  session: Session,
+  ssid: string,
+  password: string,
+  channel: number,
+  dhcp: boolean,
+): DataView => {
   if (!dhcp) {
     throw new Error("only DHCP is supported");
   }
@@ -133,7 +139,7 @@ export const SendWifiDetails = (session: Session, ssid: string, password: string
   let m_dns2 = "0.0.0.0";
 
   // tag_wifiParams in types/all.h
-  cmd_payload.add(0x0b).writeU8(0); // TODO: channel
+  cmd_payload.add(0x0b).writeU8(channel);
   cmd_payload.add(0x10).writeU8(0); // TODO: AUTH
   cmd_payload.add(0x14).writeU8(1); // DHCP
   cmd_payload.add(0x18).writeByteArray(str2byte(ssid));
