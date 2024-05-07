@@ -1,9 +1,8 @@
 import { Commands, CommandsByValue, ControlCommands } from "./datatypes.js";
 import { XqBytesDec } from "./func_replacements.js";
-import { create_P2pRdy, SendListWifi, SendUsrChk, DevSerial } from "./impl.js";
-import { Session } from "./session.js";
-import { u16_swap, u32_swap } from "./utils.js";
+import { create_P2pRdy, DevSerial, SendListWifi, SendUsrChk } from "./impl.js";
 import { logger } from "./logger.js";
+import { Session } from "./session.js";
 import { config } from "./settings.js";
 
 export const notImpl = (session: Session, dv: DataView) => {
@@ -34,7 +33,8 @@ export const handle_P2PRdy = (session: Session, _: DataView) => {
 export const makeP2pRdy = (dev: DevSerial): DataView => {
   const outbuf = new DataView(new Uint8Array(0x14).buffer); // 8 = serial u64
   // The protocol seems to expect 4 bytes -- check the regression test
-  // `replies properly to PunchPkt with 3-letters-long prefix` for a case with a real device
+  // `replies properly to PunchPkt with 3-letters-long prefix` for a case with a
+  // real device
   const devPrefixLength = 4;
   outbuf.add(0).writeString(dev.prefix);
   outbuf.add(4).writeU64(dev.serialU64);
@@ -42,10 +42,21 @@ export const makeP2pRdy = (dev: DevSerial): DataView => {
   return create_P2pRdy(outbuf);
 };
 
+const swVerToString = (swver: number): string => {
+  return (
+    ((swver >> 24) & 255).toString() +
+    "." +
+    ((swver >> 16) & 255).toString() +
+    "." +
+    ((swver >> 8) & 255).toString() +
+    "." +
+    (swver & 255).toString()
+  );
+};
 export const createResponseForControlCommand = (session: Session, dv: DataView): DataView[] => {
   const start_type = dv.add(8).readU16(); // 0xa11 on control; data starts here on DATA pkt
   const cmd_id = dv.add(10).readU16(); // 0x1120
-  let payload_len = u16_swap(dv.add(0xc).readU16());
+  let payload_len = dv.add(0xc).readU16LE();
   if (dv.byteLength > 20 && payload_len > dv.byteLength) {
     logger.warning(`Received a cropped payload: ${payload_len} when packet is ${dv.byteLength}`);
     payload_len = dv.byteLength - 20;
@@ -61,6 +72,8 @@ export const createResponseForControlCommand = (session: Session, dv: DataView):
     XqBytesDec(dv.add(20), payload_len - 4, rotate_chr);
   }
 
+  // the first 20 bytes are header
+
   switch (cmd_id) {
     case ControlCommands.ConnectUserAck:
       let c = new Uint8Array(dv.add(0x18).readByteArray(4).buffer);
@@ -70,12 +83,17 @@ export const createResponseForControlCommand = (session: Session, dv: DataView):
 
     case ControlCommands.DevStatusAck:
       // ParseDevStatus -> offset relevant?
-      let charging = u32_swap(dv.add(0x28).readU32()) & 1 ? "" : "not "; // 0x14000101 v 0x14000100
-      let power = u16_swap(dv.add(0x18).readU16()); // '3730' or '3765', milliVolts
-      let dbm = dv.add(0x24).readU8() - 0x100; // 0xbf - 0x100 = -65dbm .. constant??
+      const charging = dv.add(0x28).readU32LE() & 1 ? "" : "not "; // 0x14000101 v 0x14000100
+      const power = dv.add(0x18).readU16LE(); // '3730' or '3765', milliVolts
+      const dbm = dv.add(0x24).readU8() - 0x100; // 0xbf - 0x100 = -65dbm .. constant??
+      const n_swver = dv.add(0x14).readU32LE();
+      const swver = swVerToString(n_swver);
+
       // > -50 = excellent, -50 to -60 good, -60 to -70 fair, <-70 weak
 
-      logger.info(`Camera ${session.devName}: ${charging}charging, battery at ${power / 1000}V, Wifi ${dbm} dBm`);
+      logger.info(
+        `Camera ${session.devName}: sw: ${swver}, ${charging}charging, battery at ${power / 1000}V, Wifi ${dbm} dBm`,
+      );
       return [];
 
     case ControlCommands.WifiSettingsAck:
@@ -103,33 +121,7 @@ export const createResponseForControlCommand = (session: Session, dv: DataView):
         logger.debug("ListWifi returned []");
         return [];
       }
-      logger.log("trace", `payload len ${dv.byteLength}`);
-      let startat = 0x10;
-      const msg_len = 0x5c; // 0x58 + 0x4 of the last u32
-      const msg_count = dv.add(startat).readU32LE();
-      logger.log("trace", `should get messages: ${msg_count} in payload`);
-      startat += 4;
-      let items = [];
-      for (let i = 0; i < msg_count; i++) {
-        logger.log("trace", `start parsing ${i} at ${startat} - 0x${startat.toString(16)}`);
-        if (startat + msg_len > dv.byteLength) {
-          logger.warning("Wifi listing got cropped");
-          break;
-        }
-        const wifiListItem = {
-          ssid: dv.add(startat).readString(0x40),
-          mac: dv.add(startat + 0x40).readByteArray(8).buffer,
-          security: dv.add(startat + 0x48).readU32LE(),
-          dbm0: dv.add(startat + 0x4c).readU32LE(),
-          dbm1: dv.add(startat + 0x50).readU32LE(),
-          mode: dv.add(startat + 0x54).readU32LE(),
-          channel: dv.add(startat + 0x58).readU32LE(),
-        };
-        logger.debug(`Wifi Item: ${JSON.stringify(wifiListItem, null, 2)}`);
-        startat += msg_len;
-        logger.log("trace", `ended at ${startat} - 0x${startat.toString(16)}`);
-        items.push(wifiListItem);
-      }
+      const items = parseListWifi(dv);
       return [];
     case ControlCommands.StartVideoAck:
       logger.debug("Start video ack");
@@ -141,6 +133,49 @@ export const createResponseForControlCommand = (session: Session, dv: DataView):
       logger.info(`Unhandled control command: 0x${cmd_id.toString(16)}`);
   }
   return [];
+};
+
+type WifiListItem = {
+  ssid: string;
+  mac: string;
+  security: number;
+  dbm0: number;
+  dbm1: number;
+  mode: number;
+  channel: number;
+};
+
+export const parseListWifi = (dv: DataView): WifiListItem[] => {
+  logger.log("trace", `payload len ${dv.byteLength}`);
+  let startat = 0x10;
+  const msg_len = 0x5c; // 0x58 + 0x4 of the last u32
+  const msg_count = dv.add(startat).readU32LE();
+  logger.log("trace", `should get messages: ${msg_count} in payload`);
+  startat += 4;
+  let items = [];
+  for (let i = 0; i < msg_count; i++) {
+    logger.log("trace", `start parsing ${i} at ${startat} - 0x${startat.toString(16)}`);
+    if (startat + msg_len > dv.byteLength) {
+      logger.warning("Wifi listing got cropped");
+      break;
+    }
+    const macBytes = dv.add(startat + 0x40).readByteArray(6).buffer;
+    const mb = new Uint8Array(macBytes);
+    const wifiListItem = {
+      ssid: dv.add(startat).readString(0x40),
+      mac: [...mb].map((b) => b.toString(16).padStart(2, "0")).join(":"),
+      security: dv.add(startat + 0x48).readU32LE(),
+      dbm0: dv.add(startat + 0x4c).readU32LE(),
+      dbm1: dv.add(startat + 0x50).readU32LE(),
+      mode: dv.add(startat + 0x54).readU32LE(),
+      channel: dv.add(startat + 0x58).readU32LE(),
+    };
+    logger.debug(`Wifi Item: ${JSON.stringify(wifiListItem, null, 2)}`);
+    startat += msg_len;
+    logger.log("trace", `ended at ${startat} - 0x${startat.toString(16)}`);
+    items.push(wifiListItem);
+  }
+  return items;
 };
 
 const deal_with_data = (session: Session, dv: DataView) => {
@@ -174,14 +209,14 @@ const deal_with_data = (session: Session, dv: DataView) => {
   if (is_framed) {
     const stream_type = dv.add(12).readU8();
     if (stream_type == STREAM_TYPE_AUDIO) {
-      const audio_len = u16_swap(dv.add(8 + 16).readU16());
+      const audio_len = dv.add(8 + 16).readU16LE();
       const audio_buf = dv.add(32 + 8).readByteArray(audio_len).buffer; // 8 for pkt header, 32 for `stream_head_t`
       session.eventEmitter.emit("audio", { gap: false, data: Buffer.from(audio_buf) });
     } else if (stream_type == STREAM_TYPE_JPEG) {
       const to_read = pkt_len - 4 - 32;
       if (to_read > 0) {
-        // some cameras do not send the data with the frame, but rather as a followup message
-        // skip 8 bytes (drw header) + 32 bytes (data frame)
+        // some cameras do not send the data with the frame, but rather as a
+        // followup message skip 8 bytes (drw header) + 32 bytes (data frame)
         const data = dv.add(32 + 8).readByteArray(to_read);
         startNewFrame(data.buffer);
       }
@@ -194,10 +229,11 @@ const deal_with_data = (session: Session, dv: DataView) => {
     // a new JPEG image may begin either
     // - as a frame with stream_type == 0x03
     // - as unframed data, started by JPEG_HEADER
-    // but for both types of cameras, unframed data which does not start with JPEG_HEADER
-    // are segments of the (potentially already started) JPEG image
+    // but for both types of cameras, unframed data which does not start with
+    // JPEG_HEADER are segments of the (potentially already started) JPEG image
     const data = dv.add(8).readByteArray(pkt_len - 4);
-    // this only happens on un-framed-cameras, which start the JPEG image directly
+    // this only happens on un-framed-cameras, which start the JPEG image
+    // directly
     let is_new_image = m_hdr.startsWith(JPEG_HEADER);
 
     if (is_new_image) {
@@ -215,8 +251,8 @@ const deal_with_data = (session: Session, dv: DataView) => {
           session.frame_is_bad = true;
           logger.debug(`Dropping corrupt frame ${pkt_id}, expected ${session.rcvSeqId + 1}`);
         }
-        // this should always be enabled but currently it seems to cause more visual distortion
-        // than just missing some frames
+        // this should always be enabled but currently it seems to cause more
+        // visual distortion than just missing some frames
         if (!config.cameras[session.devName].fix_packet_loss) {
           return;
         }
