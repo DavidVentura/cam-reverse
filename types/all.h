@@ -104,7 +104,7 @@ struct stream_head_t {
 
 struct tag_wifiParams { /* PlaceHolder Structure */
     int enable;
-    int noidea;
+    int noidea; // wifi status?
     int mode;
     int chan;
     int auth;

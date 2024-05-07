@@ -336,3 +336,6 @@ what is this??
 0220   00 00 00 00 00 00 00 00                           ........
 
 -- this looks like google keys: AIzaSyB
+
+
+most useful parsing at IpcByte2ObjectParser and IlnkUtils
