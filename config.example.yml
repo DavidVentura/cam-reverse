@@ -23,6 +23,7 @@ discovery_ips:
   - 192.168.40.103
   - 192.168.40.104
   - 192.168.40.105
+  - 192.168.1.1
 
 # If you are in the same broadcast domain, then
 # it's easier to just use the broadcast address of your network
