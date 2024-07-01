@@ -3,9 +3,9 @@ import "../shim.ts";
 
 import assert from "assert";
 
-import { hexdump } from "../hexdump.js";
 import { XqBytesDec, XqBytesEnc } from "../func_replacements.js";
-import { makeP2pRdy, parseListWifi } from "../handlers.js";
+import { makeP2pRdy, parseDevStatusAck, parseListWifi } from "../handlers.js";
+import { hexdump } from "../hexdump.js";
 import { parse_PunchPkt, SendDevStatus, SendStartVideo, SendUsrChk, SendWifiDetails } from "../impl.ts";
 import { buildLogger } from "../logger.js";
 import { placeholderTypes, sprintf } from "../utils.js";
@@ -271,5 +271,23 @@ describe("make packet", () => {
 
     const got = SendWifiDetails(sess, "ACRC.NET", "fakepass", 2, true);
     assert.deepEqual(got.buffer, expected);
+  });
+  it("parses devstatusack", () => {
+    const pkt = new DataView(
+      hstrToBA(
+        "f1d0008cd1000009110a08118000000000000000190e010101010101fefefefebefefefe01000001010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010100010101010001030101010101010101010101010101fefefefefe010101010101010134030300",
+      ),
+    );
+    let payload_len = pkt.add(0xc).readU16LE();
+    XqBytesDec(pkt.add(20), payload_len - 4, 0); // this mutates pkt
+    const got = parseDevStatusAck(pkt);
+    const expected = {
+      battery_mV: 0,
+      charging: false,
+      dbm: -256,
+      swver: "0.0.15.24",
+    };
+
+    assert.deepEqual(expected, got);
   });
 });

@@ -42,7 +42,7 @@ export const makeP2pRdy = (dev: DevSerial): DataView => {
   return create_P2pRdy(outbuf);
 };
 
-const swVerToString = (swver: number): string => {
+export const swVerToString = (swver: number): string => {
   return (
     ((swver >> 24) & 255).toString() +
     "." +
@@ -52,6 +52,25 @@ const swVerToString = (swver: number): string => {
     "." +
     (swver & 255).toString()
   );
+};
+export type DevStatus = {
+  charging: boolean;
+  battery_mV: number;
+  dbm: number;
+  swver: string;
+};
+export const parseDevStatusAck = (dv: DataView): DevStatus => {
+  const charging = dv.add(0x28).readU32LE() & 1; // 0x14000101 v 0x14000100
+  const power = dv.add(0x18).readU16LE(); // '3730' or '3765', milliVolts
+  const dbm = dv.add(0x24).readU8() - 0x100; // 0xbf - 0x100 = -65dbm .. constant??
+  const n_swver = dv.add(0x14).readU32LE();
+  const swver = swVerToString(n_swver);
+  return {
+    charging: charging > 0,
+    battery_mV: power,
+    dbm,
+    swver,
+  };
 };
 export const createResponseForControlCommand = (session: Session, dv: DataView): DataView[] => {
   const start_type = dv.add(8).readU16(); // 0xa11 on control; data starts here on DATA pkt
@@ -83,16 +102,13 @@ export const createResponseForControlCommand = (session: Session, dv: DataView):
 
     case ControlCommands.DevStatusAck:
       // ParseDevStatus -> offset relevant?
-      const charging = dv.add(0x28).readU32LE() & 1 ? "" : "not "; // 0x14000101 v 0x14000100
-      const power = dv.add(0x18).readU16LE(); // '3730' or '3765', milliVolts
-      const dbm = dv.add(0x24).readU8() - 0x100; // 0xbf - 0x100 = -65dbm .. constant??
-      const n_swver = dv.add(0x14).readU32LE();
-      const swver = swVerToString(n_swver);
-
+      const status = parseDevStatusAck(dv);
       // > -50 = excellent, -50 to -60 good, -60 to -70 fair, <-70 weak
 
       logger.info(
-        `Camera ${session.devName}: sw: ${swver}, ${charging}charging, battery at ${power / 1000}V, Wifi ${dbm} dBm`,
+        `Camera ${session.devName}: sw: ${status.swver}, ${status.charging ? "" : "not "}charging, battery at ${
+          status.battery_mV
+        }mV, Wifi ${status.dbm} dBm`,
       );
       return [];
 
