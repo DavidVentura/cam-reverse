@@ -2,6 +2,7 @@ import process from "node:process";
 import { hideBin } from "yargs/helpers";
 import yargs from "yargs/yargs";
 
+import { captureSingle } from "../capture_single.js";
 import { serveHttp } from "../http_server.js";
 import { pair } from "../pair.js";
 import { loadConfig, config } from "../settings.js";
@@ -68,6 +69,25 @@ yargs(hideBin(process.argv))
         logger.error(`Node version ${majorVersion} is not supported, may malfunction`);
       }
       pair({ ssid: argv.ssid, password: argv.password });
+    },
+  )
+  .command(
+    "frame",
+    "capture a single frame from the first discovered camera",
+    (yargs) => {
+      return yargs
+        .option("log_level", { describe: "Set log level", default: "info" })
+        .option("discovery_ip", { describe: "Camera discovery IP address", default: "192.168.1.255" })
+        .option("out", { describe: "Path for output file" })
+        .demandOption(["out"])
+        .string(["out", "discovery_ip"]);
+    },
+    (argv) => {
+      buildLogger(argv.log_level, undefined);
+      if (majorVersion < 16) {
+        logger.error(`Node version ${majorVersion} is not supported, may malfunction`);
+      }
+      captureSingle({ discovery_ip: argv.discovery_ip, out_file: argv.out });
     },
   )
   .demandCommand()

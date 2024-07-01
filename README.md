@@ -27,6 +27,7 @@ Connect to the device's access point (e.g., FTYC811847AGFDZ) and run `node dist/
 
 ## Running
 
+### HTTP Server
 To execute the HTTP server, run `node dist/bin.cjs http_server`; you can access the JPEG stream at http://localhost:5000/.
 
 The roundtrip delay when using MJPEG is [~350ms](pics/delay.jpg?raw=true).
@@ -38,9 +39,9 @@ There's a basic UI which can display multiple cameras:
 Clicking on the image will take you to a page that has audio streaming. Click the button below the image to mute/unmute the audio.
 
 
-## Settings
+#### Settings
 
-You can provide a config file in `yml` format, check `config.example.yml` for an updated example:
+You can provide a config file in `yml` format, then pass it as an argument: `node bin.cjs http_server --config_file <your_config.yml>`
 
 ```yml
 http_server:
@@ -81,6 +82,12 @@ blacklisted_ips:
 All keys are optional
 
 You must restart the HTTP server for changes to the settings file to take effect.
+
+### Single capture mode
+
+```bash
+node bin.cjs frame --discovery_ip 192.168.40.104 --out out.jpg 
+```
 
 ----
 

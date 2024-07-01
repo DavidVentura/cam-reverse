@@ -249,7 +249,7 @@ const deal_with_data = (session: Session, dv: DataView) => {
         }
         // this should always be enabled but currently it seems to cause more
         // visual distortion than just missing some frames
-        if (!config.cameras[session.devName].fix_packet_loss) {
+        if (!config.cameras[session.devName]?.fix_packet_loss) {
           return;
         }
 
