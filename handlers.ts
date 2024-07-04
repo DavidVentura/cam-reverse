@@ -269,7 +269,7 @@ const deal_with_data = (session: Session, dv: DataView) => {
           return;
         }
 
-        if (session.curImage.length == 1) return; // header does not have markers
+        if (session.curImage.length <= 1) return; // header does not have markers
 
         let lastFrameSlice = session.curImage[session.curImage.length - 1];
         const lastResetMarker = findAllResetMarkers(lastFrameSlice).pop();
