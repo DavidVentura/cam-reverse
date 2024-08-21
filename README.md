@@ -89,6 +89,17 @@ You must restart the HTTP server for changes to the settings file to take effect
 node bin.cjs frame --discovery_ip 192.168.40.104 --out out.jpg 
 ```
 
+### Docker
+
+```shell
+docker run --network host \
+  -v ./config.yml:/app/config.yml \
+  ghcr.io/DavidVentura/cam-reverse:master \
+  http_server --config_file config.yml
+```
+
+also take a look at the [docker-compose.example.yml](docker-compose.example.yml) file.
+
 ----
 
 ## Protocol
