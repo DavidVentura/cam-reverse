@@ -155,8 +155,6 @@ export const serveHttp = (port: number) => {
     sessions[dev.devId] = s;
     config.cameras[dev.devId] = { rotate: 0, mirror: false, audio: true, ...(config.cameras[dev.devId] || {}) };
 
-    const header = Buffer.from(`--${BOUNDARY}\r\nContent-Type: image/jpeg\r\n\r\n`);
-
     s.eventEmitter.on("frame", () => {
       // Add an EXIF header to indicate if the image should be rotated or mirrored
       let orientation = config.cameras[dev.devId].rotate;
@@ -164,6 +162,7 @@ export const serveHttp = (port: number) => {
       const exifSegment = orientations[orientation];
       const jpegHeader = addExifToJpeg(s.curImage[0], exifSegment);
       const assembled = Buffer.concat([jpegHeader, ...s.curImage.slice(1)]);
+      const header = Buffer.from(`\r\n--${BOUNDARY}\r\nContent-Length: ${assembled.length}\r\nContent-Type: image/jpeg\r\n\r\n`);
       responses[dev.devId].forEach((res) => {
         res.write(header);
         res.write(assembled);
