@@ -1,6 +1,7 @@
 import { createSocket, RemoteInfo } from "node:dgram";
 import EventEmitter from "node:events";
 
+import { decode, encode } from "./encode.js";
 import { Commands, CommandsByValue } from "./datatypes.js";
 import {
   handle_Close,
@@ -32,6 +33,7 @@ export type Session = {
   frame_is_bad: boolean;
   frame_was_fixed: boolean;
   started: boolean;
+  encoded: boolean;
   close: () => void;
 };
 
@@ -46,7 +48,16 @@ type msgCb = (
 
 const handleIncoming: msgCb = (session, handlers, msg, rinfo) => {
   const ab = new Uint8Array(msg).buffer;
-  const dv = new DataView(ab);
+  let dv = new DataView(ab);
+  let firstByte = dv.readU8();
+  if (firstByte != 0xf1) {
+    dv = decode(dv);
+    firstByte = dv.readU8();
+    if (firstByte == 0xf1) {
+      // decoded into a legal command
+      session.encoded = true;
+    }
+  }
   const raw = dv.readU16();
   const cmd = CommandsByValue[raw];
   logger.log("trace", `<< ${cmd}`);
@@ -128,6 +139,9 @@ export const makeSession = (
         unackedDrw[packet_id] = { sent_ts: Date.now(), data: msg };
       }
       logger.log("trace", `>> ${cmd}`);
+      if (session.encoded) {
+        msg = encode(msg);
+      }
       sock.send(new Uint8Array(msg.buffer), ra.port, session.dst_ip);
     },
     ackDrw: (id: number) => {
@@ -139,6 +153,7 @@ export const makeSession = (
     rcvSeqId: 0,
     frame_is_bad: false,
     frame_was_fixed: false,
+    encoded: false,
     unackedDrw,
     close: () => {
       session.eventEmitter.emit("disconnect");
