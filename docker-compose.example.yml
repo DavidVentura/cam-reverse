@@ -1,0 +1,10 @@
+services:
+  cam-reverse:
+    container_name: cam-reverse
+    image: ghcr.io/DavidVentura/cam-reverse:master
+    restart: unless-stopped
+    user: 1000:1000 # run as non-root user
+    network_mode: host # required and only work properly on linux !
+    command: http_server --config_file /app/config.yml
+    volumes:
+      - ./config.yml:/app/config.yml:ro
